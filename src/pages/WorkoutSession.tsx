@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, ChevronRight, Clock, Dumbbell } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Clock, Dumbbell, RefreshCw } from "lucide-react";
 
 interface Exercise {
   name: string;
@@ -22,10 +22,20 @@ interface Workout {
   day_of_week: number;
 }
 
+interface ReplacedExercise {
+  id: string;
+  original_index: number;
+  original_exercise: any;
+  new_exercise: any;
+  completed: boolean;
+}
+
 const WorkoutSession = () => {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exerciseOrder, setExerciseOrder] = useState<number[]>([]);
   const [completedExercises, setCompletedExercises] = useState<boolean[]>([]);
+  const [replacedExercises, setReplacedExercises] = useState<ReplacedExercise[]>([]);
+  const [replacing, setReplacing] = useState(false);
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -54,12 +64,19 @@ const WorkoutSession = () => {
 
       if (error) throw error;
 
+      // Load replaced exercises
+      const { data: replacements } = await supabase
+        .from("exercise_replacements")
+        .select("*")
+        .eq("workout_id", workoutId);
+
       const parsedWorkout = {
         ...workoutData,
         exercises: workoutData.exercises as unknown as Exercise[]
       };
 
       setWorkout(parsedWorkout);
+      setReplacedExercises(replacements || []);
       setCompletedExercises(new Array(parsedWorkout.exercises.length).fill(false));
       setExerciseOrder(Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i));
     } catch (error: any) {
@@ -94,6 +111,61 @@ const WorkoutSession = () => {
     }
   };
 
+  const handleReplaceExercise = async () => {
+    const currentRealIndex = exerciseOrder[0];
+    const currentExercise = workout!.exercises[currentRealIndex];
+    
+    setReplacing(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.functions.invoke('replace-exercise', {
+        body: { exercise: currentExercise }
+      });
+
+      if (error) throw error;
+
+      const newExercise = data.newExercise;
+
+      // Save replacement to database
+      const { error: insertError } = await supabase
+        .from('exercise_replacements')
+        .insert({
+          workout_id: workoutId,
+          user_id: user.id,
+          original_exercise: currentExercise as any,
+          new_exercise: newExercise as any,
+          original_index: currentRealIndex,
+          completed: false
+        } as any);
+
+      if (insertError) throw insertError;
+
+      // Update local state
+      const updatedWorkout = { ...workout! };
+      updatedWorkout.exercises[currentRealIndex] = newExercise;
+      setWorkout(updatedWorkout);
+
+      await loadWorkout();
+
+      toast({
+        title: "Exercício trocado!",
+        description: `${currentExercise.name} foi substituído por ${newExercise.name}`,
+      });
+    } catch (error: any) {
+      console.error('Error replacing exercise:', error);
+      toast({
+        title: "Erro ao trocar exercício",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setReplacing(false);
+    }
+  };
+
   const handleSkipExercise = () => {
     const currentRealIndex = exerciseOrder[0];
     const newOrder = [...exerciseOrder.slice(1)];
@@ -113,7 +185,7 @@ const WorkoutSession = () => {
     
     toast({
       title: "Exercício pulado",
-      description: "O exercício foi movido para o final da fila.",
+      description: "O exercício foi movido para fazer daqui a pouco.",
     });
   };
 
@@ -147,6 +219,7 @@ const WorkoutSession = () => {
 
   const currentExerciseRealIndex = exerciseOrder[0];
   const currentExercise = workout?.exercises[currentExerciseRealIndex];
+  const isExerciseReplaced = replacedExercises.some(r => r.original_index === currentExerciseRealIndex);
 
   if (loading) {
     return (
@@ -220,12 +293,20 @@ const WorkoutSession = () => {
                   Faltam {exerciseOrder.length} exercícios
                 </span>
                 <h2 className="text-3xl font-bold mt-2">{currentExercise.name}</h2>
-                {completedExercises[currentExerciseRealIndex] && (
-                  <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                    <Check className="h-4 w-4" />
-                    Concluído
-                  </div>
-                )}
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  {completedExercises[currentExerciseRealIndex] && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                      <Check className="h-4 w-4" />
+                      Concluído
+                    </div>
+                  )}
+                  {isExerciseReplaced && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full text-sm font-medium">
+                      <RefreshCw className="h-4 w-4" />
+                      Trocado
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="aspect-video bg-muted rounded-lg mb-6 flex items-center justify-center">
@@ -281,14 +362,27 @@ const WorkoutSession = () => {
                 </Button>
                 
                 {!completedExercises[currentExerciseRealIndex] && exerciseOrder.length > 1 && (
-                  <Button
-                    onClick={handleSkipExercise}
-                    size="lg"
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Pular Exercício (Aparelho Ocupado)
-                  </Button>
+                  <>
+                    <Button
+                      onClick={handleReplaceExercise}
+                      size="lg"
+                      variant="secondary"
+                      className="w-full"
+                      disabled={replacing}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${replacing ? 'animate-spin' : ''}`} />
+                      {replacing ? 'Trocando...' : 'Trocar Exercício'}
+                    </Button>
+                    
+                    <Button
+                      onClick={handleSkipExercise}
+                      size="lg"
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Pular Exercício (fazer daqui a pouco)
+                    </Button>
+                  </>
                 )}
               </div>
             </Card>

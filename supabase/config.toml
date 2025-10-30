@@ -2,3 +2,9 @@ project_id = "dagoajsdjumdcmvmedew"
 
 [functions.generate-workout]
 verify_jwt = true
+
+[functions.replace-exercise]
+verify_jwt = true
+
+[functions.n8n-chat]
+verify_jwt = true

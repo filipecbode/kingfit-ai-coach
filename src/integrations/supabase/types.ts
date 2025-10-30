@@ -58,6 +58,47 @@ export type Database = {
           },
         ]
       }
+      exercise_replacements: {
+        Row: {
+          completed: boolean | null
+          id: string
+          new_exercise: Json
+          original_exercise: Json
+          original_index: number
+          replaced_at: string | null
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          id?: string
+          new_exercise: Json
+          original_exercise: Json
+          original_index: number
+          replaced_at?: string | null
+          user_id: string
+          workout_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          id?: string
+          new_exercise?: Json
+          original_exercise?: Json
+          original_index?: number
+          replaced_at?: string | null
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_replacements_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number

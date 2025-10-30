@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Dumbbell, LogOut, Calendar, TrendingUp } from "lucide-react";
+import { AiChat } from "@/components/AiChat";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -244,6 +245,8 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+      
+      <AiChat />
     </div>
   );
 };
