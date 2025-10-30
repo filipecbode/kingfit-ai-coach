@@ -76,10 +76,30 @@ const WorkoutSession = () => {
         exercises: workoutData.exercises as unknown as Exercise[]
       };
 
+      // Initialize completed exercises array
+      const initialCompleted = new Array(parsedWorkout.exercises.length).fill(false);
+      
+      // Mark replaced/completed exercises
+      if (replacements && replacements.length > 0) {
+        replacements.forEach(replacement => {
+          // Mark replaced exercises as completed if they were completed
+          if (replacement.completed) {
+            initialCompleted[replacement.original_index] = true;
+          }
+          // Update exercise with replacement
+          parsedWorkout.exercises[replacement.original_index] = replacement.new_exercise as unknown as Exercise;
+        });
+      }
+
       setWorkout(parsedWorkout);
       setReplacedExercises(replacements || []);
-      setCompletedExercises(new Array(parsedWorkout.exercises.length).fill(false));
-      setExerciseOrder(Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i));
+      setCompletedExercises(initialCompleted);
+      
+      // Remove already completed exercises from the order
+      const activeExercises = Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i)
+        .filter(i => !initialCompleted[i]);
+      
+      setExerciseOrder(activeExercises);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar treino",
@@ -96,11 +116,20 @@ const WorkoutSession = () => {
     setStarted(true);
   };
 
-  const handleCompleteExercise = () => {
+  const handleCompleteExercise = async () => {
     const currentRealIndex = exerciseOrder[0];
     const newCompleted = [...completedExercises];
     newCompleted[currentRealIndex] = true;
     setCompletedExercises(newCompleted);
+
+    // Update replacement as completed if it exists
+    const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
+    if (replacement) {
+      await supabase
+        .from('exercise_replacements')
+        .update({ completed: true })
+        .eq('id', replacement.id);
+    }
 
     const newOrder = exerciseOrder.slice(1);
     setExerciseOrder(newOrder);
@@ -356,7 +385,7 @@ const WorkoutSession = () => {
                     </>
                   ) : (
                     <>
-                      Concluir Exercício
+                      Concluir Aparelho
                       <ChevronRight className="h-4 w-4 ml-2" />
                     </>
                   )}
