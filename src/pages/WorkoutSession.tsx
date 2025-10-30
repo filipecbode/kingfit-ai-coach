@@ -24,7 +24,7 @@ interface Workout {
 
 const WorkoutSession = () => {
   const [workout, setWorkout] = useState<Workout | null>(null);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [exerciseOrder, setExerciseOrder] = useState<number[]>([]);
   const [completedExercises, setCompletedExercises] = useState<boolean[]>([]);
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -61,6 +61,7 @@ const WorkoutSession = () => {
 
       setWorkout(parsedWorkout);
       setCompletedExercises(new Array(parsedWorkout.exercises.length).fill(false));
+      setExerciseOrder(Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i));
     } catch (error: any) {
       toast({
         title: "Erro ao carregar treino",
@@ -78,17 +79,42 @@ const WorkoutSession = () => {
   };
 
   const handleCompleteExercise = () => {
+    const currentRealIndex = exerciseOrder[0];
     const newCompleted = [...completedExercises];
-    newCompleted[currentExerciseIndex] = true;
+    newCompleted[currentRealIndex] = true;
     setCompletedExercises(newCompleted);
 
-    if (currentExerciseIndex < (workout?.exercises.length || 0) - 1) {
+    const newOrder = exerciseOrder.slice(1);
+    setExerciseOrder(newOrder);
+
+    if (newOrder.length === 0) {
       setTimeout(() => {
-        setCurrentExerciseIndex(currentExerciseIndex + 1);
+        completeWorkout();
       }, 300);
-    } else {
-      completeWorkout();
     }
+  };
+
+  const handleSkipExercise = () => {
+    const currentRealIndex = exerciseOrder[0];
+    const newOrder = [...exerciseOrder.slice(1)];
+    
+    // Encontra a posição do primeiro exercício concluído
+    const firstCompletedIndex = newOrder.findIndex(idx => completedExercises[idx]);
+    
+    // Se não há exercícios concluídos, adiciona no final
+    // Se há exercícios concluídos, adiciona antes deles
+    if (firstCompletedIndex === -1) {
+      newOrder.push(currentRealIndex);
+    } else {
+      newOrder.splice(firstCompletedIndex, 0, currentRealIndex);
+    }
+    
+    setExerciseOrder(newOrder);
+    
+    toast({
+      title: "Exercício pulado",
+      description: "O exercício foi movido para o final da fila.",
+    });
   };
 
   const completeWorkout = async () => {
@@ -119,6 +145,9 @@ const WorkoutSession = () => {
     ? (completedExercises.filter(Boolean).length / workout.exercises.length) * 100
     : 0;
 
+  const currentExerciseRealIndex = exerciseOrder[0];
+  const currentExercise = workout?.exercises[currentExerciseRealIndex];
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -130,9 +159,7 @@ const WorkoutSession = () => {
     );
   }
 
-  if (!workout) return null;
-
-  const currentExercise = workout.exercises[currentExerciseIndex];
+  if (!workout || !currentExercise) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10">
@@ -190,9 +217,15 @@ const WorkoutSession = () => {
             <Card className="p-8">
               <div className="text-center mb-6">
                 <span className="text-sm text-muted-foreground">
-                  Exercício {currentExerciseIndex + 1} de {workout.exercises.length}
+                  Faltam {exerciseOrder.length} exercícios
                 </span>
                 <h2 className="text-3xl font-bold mt-2">{currentExercise.name}</h2>
+                {completedExercises[currentExerciseRealIndex] && (
+                  <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                    <Check className="h-4 w-4" />
+                    Concluído
+                  </div>
+                )}
               </div>
 
               <div className="aspect-video bg-muted rounded-lg mb-6 flex items-center justify-center">
@@ -222,29 +255,42 @@ const WorkoutSession = () => {
                 )}
               </div>
 
-              <Button
-                onClick={handleCompleteExercise}
-                size="lg"
-                className="w-full"
-                disabled={completedExercises[currentExerciseIndex]}
-              >
-                {completedExercises[currentExerciseIndex] ? (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    Concluído
-                  </>
-                ) : currentExerciseIndex === workout.exercises.length - 1 ? (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    Finalizar Treino
-                  </>
-                ) : (
-                  <>
-                    Concluir Exercício
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleCompleteExercise}
+                  size="lg"
+                  className="w-full"
+                  disabled={completedExercises[currentExerciseRealIndex]}
+                >
+                  {completedExercises[currentExerciseRealIndex] ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Concluído
+                    </>
+                  ) : exerciseOrder.length === 1 ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Finalizar Treino
+                    </>
+                  ) : (
+                    <>
+                      Concluir Exercício
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+                
+                {!completedExercises[currentExerciseRealIndex] && exerciseOrder.length > 1 && (
+                  <Button
+                    onClick={handleSkipExercise}
+                    size="lg"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Pular Exercício (Aparelho Ocupado)
+                  </Button>
                 )}
-              </Button>
+              </div>
             </Card>
           </div>
         )}
