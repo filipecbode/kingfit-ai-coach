@@ -11,14 +11,9 @@ const Index = () => {
             <Dumbbell className="h-8 w-8 text-primary" />
             <span className="text-2xl font-black">KINGFIT</span>
           </div>
-          <nav className="hidden items-center gap-8 md:flex">
-            <a href="#recursos" className="font-medium transition-colors hover:text-accent">Recursos</a>
-            <a href="#planos" className="font-medium transition-colors hover:text-accent">Planos</a>
-            <a href="#contato" className="font-medium transition-colors hover:text-accent">Contato</a>
-            <Button variant="outline" className="border-white/30 bg-white/10 backdrop-blur-sm hover:bg-white/20">
-              Entrar
-            </Button>
-          </nav>
+          <Button variant="outline" className="border-white/30 bg-white/10 backdrop-blur-sm hover:bg-white/20">
+            Entrar
+          </Button>
         </div>
       </header>
 
@@ -60,7 +55,7 @@ const Index = () => {
               </Button>
               
               <p className="mt-4 text-sm text-gray-400">
-                <strong className="text-accent">Teste gratuitamente por 7 dias.</strong> Sem compromisso, sem dados bancários.
+                <strong className="text-accent">Teste gratuitamente por 7 dias.</strong> Cobrança apenas a partir do 8º dia.
               </p>
             </div>
             
@@ -135,12 +130,12 @@ const Index = () => {
                 </div>
                 
                 <div className="mb-4 text-7xl font-black md:text-8xl">
-                  R$ 14,90
+                  R$ 19,90
                   <span className="text-2xl font-normal text-gray-400">/mês</span>
                 </div>
                 
                 <p className="text-lg font-medium text-accent">
-                  Menos de R$ 0,50 por dia
+                  Menos de R$ 0,70 por dia
                 </p>
               </div>
               
