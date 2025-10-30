@@ -11,7 +11,11 @@ const Index = () => {
             <Dumbbell className="h-8 w-8 text-primary" />
             <span className="text-2xl font-black">KINGFIT</span>
           </div>
-          <Button variant="outline" className="border-white/30 bg-white/10 backdrop-blur-sm hover:bg-white/20">
+          <Button 
+            variant="outline" 
+            className="border-white/30 bg-white/10 backdrop-blur-sm hover:bg-white/20"
+            onClick={() => window.location.href = '/auth'}
+          >
             Entrar
           </Button>
         </div>
@@ -50,6 +54,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 className="h-16 gap-3 bg-gradient-secondary px-8 text-lg font-bold shadow-intense hover:scale-105 transition-all"
+                onClick={() => window.location.href = '/auth'}
               >
                 COMEÇAR TESTE GRÁTIS
               </Button>
