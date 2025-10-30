@@ -2,110 +2,116 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, ArrowLeft, TrendingUp } from "lucide-react";
+import { ArrowLeft, Upload, TrendingUp } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const motivationalMessages = [
-  "Cada foto é uma prova do seu progresso! Continue firme! 💪",
-  "Você está construindo a melhor versão de si mesmo! 🔥",
-  "O caminho pode ser longo, mas cada passo conta! 🚀",
-  "Seu esforço de hoje é o corpo dos seus sonhos amanhã! ⭐",
-  "Evolução é sobre consistência, não perfeição! 🎯",
-  "Você já percorreu tanto, olhe onde chegou! 👏",
+  "Sua jornada de transformação está apenas começando! 💪",
+  "Cada dia é uma nova oportunidade de evoluir! 🌟",
+  "O progresso é feito de pequenas vitórias diárias! 🎯",
+  "Você está mais forte do que ontem! 🔥",
+  "A consistência é a chave do sucesso! ⭐",
+  "Acredite no processo, os resultados virão! 🚀",
+  "Você está construindo a melhor versão de si mesmo! 💎",
 ];
 
 export default function Evolution() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [canRecord, setCanRecord] = useState(false);
-  const [daysRemaining, setDaysRemaining] = useState(0);
+  const [profile, setProfile] = useState<any>(null);
+  const [lastRecord, setLastRecord] = useState<any>(null);
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [daysUntilNext, setDaysUntilNext] = useState(0);
+  const [motivationalMessage] = useState(
+    motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)]
+  );
+
   const [weight, setWeight] = useState("");
   const [notes, setNotes] = useState("");
   const [frontPhoto, setFrontPhoto] = useState<File | null>(null);
   const [sidePhoto, setSidePhoto] = useState<File | null>(null);
   const [backPhoto, setBackPhoto] = useState<File | null>(null);
-  const [motivationalMessage] = useState(
-    motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)]
-  );
-  const [previousRecords, setPreviousRecords] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     checkAuth();
-    checkLastRecord();
-    loadPreviousRecords();
+    loadData();
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       navigate("/auth");
     }
   };
 
-  const checkLastRecord = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const { data: records } = await supabase
-      .from("evolution_records")
-      .select("record_date")
-      .eq("user_id", user.id)
-      .order("record_date", { ascending: false })
-      .limit(1);
+      // Load profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      setProfile(profileData);
 
-    if (!records || records.length === 0) {
-      setCanRecord(true);
-      return;
-    }
+      // Load last evolution record
+      const { data: records } = await supabase
+        .from("evolution_records")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("record_date", { ascending: false })
+        .limit(1);
 
-    const lastRecordDate = new Date(records[0].record_date);
-    const today = new Date();
-    const nextAllowedDate = new Date(lastRecordDate);
-    nextAllowedDate.setMonth(nextAllowedDate.getMonth() + 1);
-
-    if (today >= nextAllowedDate) {
-      setCanRecord(true);
-    } else {
-      const diffTime = nextAllowedDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      setDaysRemaining(diffDays);
+      if (records && records.length > 0) {
+        setLastRecord(records[0]);
+        
+        // Check if can submit new record (30 days since last)
+        const lastDate = new Date(records[0].record_date);
+        const today = new Date();
+        const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff >= 30) {
+          setCanSubmit(true);
+          setDaysUntilNext(0);
+        } else {
+          setCanSubmit(false);
+          setDaysUntilNext(30 - daysDiff);
+        }
+      } else {
+        setCanSubmit(true);
+        setDaysUntilNext(0);
+      }
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loadPreviousRecords = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: records } = await supabase
-      .from("evolution_records")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("record_date", { ascending: false })
-      .limit(6);
-
-    if (records) {
-      setPreviousRecords(records);
-    }
-  };
-
-  const uploadPhoto = async (file: File, type: string): Promise<string | null> => {
+  const uploadPhoto = async (file: File, type: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}/${Date.now()}_${type}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError, data } = await supabase.storage
       .from('evolution-photos')
       .upload(fileName, file);
 
     if (uploadError) {
-      console.error('Error uploading photo:', uploadError);
+      console.error("Error uploading photo:", uploadError);
       return null;
     }
 
@@ -116,224 +122,232 @@ export default function Evolution() {
     return publicUrl;
   };
 
-  const handleSubmit = async () => {
-    if (!weight || !frontPhoto || !sidePhoto || !backPhoto) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!weight) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha o peso e adicione as 3 fotos.",
+        title: "Erro",
+        description: "Por favor, informe seu peso atual.",
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
-
+    setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const frontUrl = await uploadPhoto(frontPhoto, 'front');
-      const sideUrl = await uploadPhoto(sidePhoto, 'side');
-      const backUrl = await uploadPhoto(backPhoto, 'back');
+      // Upload photos
+      const frontPhotoUrl = frontPhoto ? await uploadPhoto(frontPhoto, "front") : null;
+      const sidePhotoUrl = sidePhoto ? await uploadPhoto(sidePhoto, "side") : null;
+      const backPhotoUrl = backPhoto ? await uploadPhoto(backPhoto, "back") : null;
 
-      if (!frontUrl || !sideUrl || !backUrl) {
-        throw new Error('Erro ao fazer upload das fotos');
-      }
-
+      // Insert record
       const { error } = await supabase
-        .from('evolution_records')
+        .from("evolution_records")
         .insert({
           user_id: user.id,
           weight: parseFloat(weight),
-          front_photo_url: frontUrl,
-          side_photo_url: sideUrl,
-          back_photo_url: backUrl,
-          notes: notes || null,
+          front_photo_url: frontPhotoUrl,
+          side_photo_url: sidePhotoUrl,
+          back_photo_url: backPhotoUrl,
+          notes: notes,
         });
 
       if (error) throw error;
 
       // Update profile weight
       await supabase
-        .from('profiles')
+        .from("profiles")
         .update({ weight: parseFloat(weight) })
-        .eq('id', user.id);
+        .eq("id", user.id);
 
       toast({
         title: "Evolução registrada! 🎉",
-        description: "Que tal gerar um novo plano de treino adaptado ao seu progresso?",
+        description: "Seu progresso foi salvo. Que tal gerar um novo plano de treino adaptado?",
       });
 
+      // Redirect to dashboard
       navigate("/dashboard");
     } catch (error) {
-      console.error('Error saving evolution:', error);
+      console.error("Error submitting evolution:", error);
       toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível registrar sua evolução. Tente novamente.",
+        title: "Erro",
+        description: "Não foi possível salvar sua evolução.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-2xl">Carregando...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-4xl mx-auto">
         <Button
           variant="ghost"
           onClick={() => navigate("/dashboard")}
-          className="mb-6"
+          className="mb-4"
         >
-          <ArrowLeft className="mr-2" /> Voltar
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar
         </Button>
 
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Evolução
-          </h1>
-          <p className="text-muted-foreground italic">{motivationalMessage}</p>
-        </div>
+        <Card className="mb-6 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-6 w-6" />
+              {motivationalMessage}
+            </CardTitle>
+          </CardHeader>
+        </Card>
 
-        {!canRecord ? (
-          <Card className="p-8 text-center">
-            <TrendingUp className="w-16 h-16 mx-auto mb-4 text-primary animate-pulse" />
-            <h2 className="text-2xl font-bold mb-2">Aguarde um pouco mais!</h2>
-            <p className="text-muted-foreground mb-4">
-              Você poderá registrar sua próxima evolução em:
-            </p>
-            <div className="text-5xl font-bold text-primary mb-2">
-              {daysRemaining}
-            </div>
-            <p className="text-muted-foreground">
-              {daysRemaining === 1 ? "dia" : "dias"}
-            </p>
+        {!canSubmit ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Próxima Evolução em {daysUntilNext} dias</CardTitle>
+              <CardDescription>
+                Você poderá registrar sua próxima evolução em breve!
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Progress value={((30 - daysUntilNext) / 30) * 100} className="mb-4" />
+              <p className="text-sm text-muted-foreground">
+                Continue firme nos treinos! Em {daysUntilNext} dias você poderá registrar sua evolução mensal.
+              </p>
+            </CardContent>
           </Card>
         ) : (
-          <Card className="p-6">
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="weight">Peso Atual (kg) *</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  step="0.1"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  placeholder="Ex: 75.5"
-                />
-              </div>
-
-              <div>
-                <Label>Foto de Frente *</Label>
-                <div className="mt-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Registre Sua Evolução</CardTitle>
+              <CardDescription>
+                Acompanhe seu progresso com fotos e medidas mensais
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <Label htmlFor="weight">Peso Atual (kg) *</Label>
                   <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setFrontPhoto(e.target.files?.[0] || null)}
+                    id="weight"
+                    type="number"
+                    step="0.1"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder={profile?.weight || "Ex: 75.5"}
+                    required
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label>Foto de Lado *</Label>
-                <div className="mt-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSidePhoto(e.target.files?.[0] || null)}
+                <div className="space-y-4">
+                  <Label>Fotos da Evolução</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Envie 3 fotos para melhor acompanhamento
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="front-photo" className="cursor-pointer">
+                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary transition-colors text-center">
+                          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm font-medium">Foto de Frente</p>
+                          {frontPhoto && <p className="text-xs text-primary mt-1">✓ Selecionada</p>}
+                        </div>
+                      </Label>
+                      <Input
+                        id="front-photo"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setFrontPhoto(e.target.files?.[0] || null)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="side-photo" className="cursor-pointer">
+                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary transition-colors text-center">
+                          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm font-medium">Foto de Lado</p>
+                          {sidePhoto && <p className="text-xs text-primary mt-1">✓ Selecionada</p>}
+                        </div>
+                      </Label>
+                      <Input
+                        id="side-photo"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setSidePhoto(e.target.files?.[0] || null)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="back-photo" className="cursor-pointer">
+                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-primary transition-colors text-center">
+                          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm font-medium">Foto de Costas</p>
+                          {backPhoto && <p className="text-xs text-primary mt-1">✓ Selecionada</p>}
+                        </div>
+                      </Label>
+                      <Input
+                        id="back-photo"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setBackPhoto(e.target.files?.[0] || null)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="notes">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Como você está se sentindo? Houve mudanças na alimentação ou rotina?"
+                    rows={4}
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label>Foto de Costas *</Label>
-                <div className="mt-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setBackPhoto(e.target.files?.[0] || null)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Como você está se sentindo? Alguma conquista especial?"
-                  rows={4}
-                />
-              </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="w-full"
-                size="lg"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2" />
-                    Registrar Evolução
-                  </>
-                )}
-              </Button>
-            </div>
+                <Button type="submit" className="w-full" disabled={uploading}>
+                  {uploading ? "Salvando..." : "Registrar Evolução"}
+                </Button>
+              </form>
+            </CardContent>
           </Card>
         )}
 
-        {previousRecords.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-4">Histórico de Evolução</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {previousRecords.map((record) => (
-                <Card key={record.id} className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <p className="font-semibold">
-                        {new Date(record.record_date).toLocaleDateString('pt-BR')}
-                      </p>
-                      <p className="text-2xl font-bold text-primary">{record.weight} kg</p>
-                    </div>
-                  </div>
-                  {record.notes && (
-                    <p className="text-sm text-muted-foreground mb-3">{record.notes}</p>
-                  )}
-                  <div className="grid grid-cols-3 gap-2">
-                    {record.front_photo_url && (
-                      <img
-                        src={record.front_photo_url}
-                        alt="Frente"
-                        className="w-full h-24 object-cover rounded"
-                      />
-                    )}
-                    {record.side_photo_url && (
-                      <img
-                        src={record.side_photo_url}
-                        alt="Lado"
-                        className="w-full h-24 object-cover rounded"
-                      />
-                    )}
-                    {record.back_photo_url && (
-                      <img
-                        src={record.back_photo_url}
-                        alt="Costas"
-                        className="w-full h-24 object-cover rounded"
-                      />
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+        {lastRecord && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Último Registro</CardTitle>
+              <CardDescription>
+                {new Date(lastRecord.record_date).toLocaleDateString('pt-BR')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg">
+                <strong>Peso:</strong> {lastRecord.weight} kg
+              </p>
+              {lastRecord.notes && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  <strong>Observações:</strong> {lastRecord.notes}
+                </p>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
