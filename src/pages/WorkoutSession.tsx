@@ -364,6 +364,15 @@ const WorkoutSession = () => {
                 {!completedExercises[currentExerciseRealIndex] && exerciseOrder.length > 1 && (
                   <>
                     <Button
+                      onClick={handleSkipExercise}
+                      size="lg"
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Pular Exercício (fazer daqui a pouco)
+                    </Button>
+                    
+                    <Button
                       onClick={handleReplaceExercise}
                       size="lg"
                       variant="secondary"
@@ -371,16 +380,7 @@ const WorkoutSession = () => {
                       disabled={replacing}
                     >
                       <RefreshCw className={`h-4 w-4 mr-2 ${replacing ? 'animate-spin' : ''}`} />
-                      {replacing ? 'Trocando...' : 'Trocar Exercício'}
-                    </Button>
-                    
-                    <Button
-                      onClick={handleSkipExercise}
-                      size="lg"
-                      variant="outline"
-                      className="w-full"
-                    >
-                      Pular Exercício (fazer daqui a pouco)
+                      {replacing ? 'Trocando...' : 'Trocar Exercício/Aparelho'}
                     </Button>
                   </>
                 )}
