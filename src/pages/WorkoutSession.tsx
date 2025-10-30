@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, ChevronRight, Clock, Dumbbell, RefreshCw } from "lucide-react";
 import { AiChat } from "@/components/AiChat";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Exercise {
   name: string;
@@ -39,6 +40,7 @@ const WorkoutSession = () => {
   const [replacing, setReplacing] = useState(false);
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const navigate = useNavigate();
   const { workoutId } = useParams();
   const { toast } = useToast();
@@ -141,11 +143,16 @@ const WorkoutSession = () => {
     }
   };
 
-  const handleReplaceExercise = async () => {
+  const handleReplaceExercise = () => {
+    setShowReplaceDialog(true);
+  };
+
+  const executeReplaceExercise = async (replaceScope: 'day' | 'month') => {
     const currentRealIndex = exerciseOrder[0];
     const currentExercise = workout!.exercises[currentRealIndex];
     
     setReplacing(true);
+    setShowReplaceDialog(false);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -159,30 +166,59 @@ const WorkoutSession = () => {
 
       const newExercise = data.newExercise;
 
-      // Save replacement to database
-      const { error: insertError } = await supabase
-        .from('exercise_replacements')
-        .insert({
-          workout_id: workoutId,
-          user_id: user.id,
-          original_exercise: currentExercise as any,
-          new_exercise: newExercise as any,
-          original_index: currentRealIndex,
-          completed: false
-        } as any);
+      if (replaceScope === 'day') {
+        // Trocar apenas no treino atual
+        const { error: insertError } = await supabase
+          .from('exercise_replacements')
+          .insert({
+            workout_id: workoutId,
+            user_id: user.id,
+            original_exercise: currentExercise as any,
+            new_exercise: newExercise as any,
+            original_index: currentRealIndex,
+            completed: false
+          } as any);
 
-      if (insertError) throw insertError;
+        if (insertError) throw insertError;
+      } else {
+        // Trocar em todos os treinos do mesmo dia da semana no plano
+        const { data: currentWorkout } = await supabase
+          .from('workouts')
+          .select('plan_id, day_of_week')
+          .eq('id', workoutId)
+          .single();
 
-      // Update local state
-      const updatedWorkout = { ...workout! };
-      updatedWorkout.exercises[currentRealIndex] = newExercise;
-      setWorkout(updatedWorkout);
+        if (currentWorkout) {
+          const { data: workoutsToUpdate } = await supabase
+            .from('workouts')
+            .select('id')
+            .eq('plan_id', currentWorkout.plan_id)
+            .eq('day_of_week', currentWorkout.day_of_week);
+
+          if (workoutsToUpdate) {
+            for (const w of workoutsToUpdate) {
+              await supabase
+                .from('exercise_replacements')
+                .insert({
+                  workout_id: w.id,
+                  user_id: user.id,
+                  original_exercise: currentExercise as any,
+                  new_exercise: newExercise as any,
+                  original_index: currentRealIndex,
+                  completed: false
+                } as any);
+            }
+          }
+        }
+      }
 
       await loadWorkout();
 
       toast({
         title: "Exercício trocado!",
-        description: `${currentExercise.name} foi substituído por ${newExercise.name}`,
+        description: replaceScope === 'day' 
+          ? `${currentExercise.name} foi substituído por ${newExercise.name} apenas hoje`
+          : `${currentExercise.name} foi substituído por ${newExercise.name} em todos os treinos do mês`,
       });
     } catch (error: any) {
       console.error('Error replacing exercise:', error);
@@ -293,14 +329,37 @@ const WorkoutSession = () => {
             </div>
 
             <div className="space-y-3 mb-8 text-left">
-              {workout.exercises.map((exercise, idx) => (
-                <div key={idx} className="p-4 border border-border rounded-lg">
-                  <p className="font-medium">{exercise.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {exercise.sets} séries x {exercise.reps} repetições
-                  </p>
-                </div>
-              ))}
+              {workout.exercises.map((exercise, idx) => {
+                const isCompleted = completedExercises[idx];
+                const isReplaced = replacedExercises.some(r => r.original_index === idx);
+                
+                return (
+                  <div key={idx} className="p-4 border border-border rounded-lg">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium">{exercise.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {exercise.sets} séries x {exercise.reps} repetições
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {isCompleted && (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium whitespace-nowrap">
+                            <Check className="h-3 w-3" />
+                            Concluído
+                          </div>
+                        )}
+                        {isReplaced && (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium whitespace-nowrap">
+                            <RefreshCw className="h-3 w-3" />
+                            Trocado
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <Button onClick={handleStartWorkout} size="lg" className="w-full">
@@ -419,6 +478,27 @@ const WorkoutSession = () => {
           </div>
         )}
       </main>
+      
+      <AlertDialog open={showReplaceDialog} onOpenChange={setShowReplaceDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Trocar exercício</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja trocar este exercício apenas no treino de hoje ou em todos os treinos deste dia da semana no mês?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => executeReplaceExercise('day')}>
+              Só hoje
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => executeReplaceExercise('month')}>
+              Todo o mês
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <AiChat />
     </div>
   );
