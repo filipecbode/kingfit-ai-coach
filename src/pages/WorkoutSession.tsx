@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, ChevronRight, Clock, Dumbbell, RefreshCw } from "lucide-react";
+import { AiChat } from "@/components/AiChat";
 
 interface Exercise {
   name: string;
@@ -389,6 +390,7 @@ const WorkoutSession = () => {
           </div>
         )}
       </main>
+      <AiChat />
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dumbbell } from "lucide-react";
+import { AiChat } from "@/components/AiChat";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -157,6 +158,7 @@ const Auth = () => {
           )}
         </div>
       </div>
+      <AiChat />
     </div>
   );
 };

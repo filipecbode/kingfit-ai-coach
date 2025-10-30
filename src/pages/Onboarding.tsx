@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dumbbell } from "lucide-react";
+import { AiChat } from "@/components/AiChat";
 
 const Onboarding = () => {
   const [loading, setLoading] = useState(false);
@@ -23,6 +25,8 @@ const Onboarding = () => {
     hours_per_day: "",
     experience_level: "",
   });
+  
+  const [bodyPartPreferences, setBodyPartPreferences] = useState<string[]>([]);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,6 +51,7 @@ const Onboarding = () => {
         days_per_week: parseInt(formData.days_per_week),
         hours_per_day: parseFloat(formData.hours_per_day),
         experience_level: formData.experience_level,
+        body_part_preferences: bodyPartPreferences,
       });
 
       if (error) throw error;
@@ -71,6 +76,32 @@ const Onboarding = () => {
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const toggleBodyPart = (bodyPart: string) => {
+    if (bodyPart === "corpo-todo") {
+      setBodyPartPreferences(prev => 
+        prev.includes("corpo-todo") ? [] : ["corpo-todo"]
+      );
+    } else {
+      setBodyPartPreferences(prev => {
+        const filtered = prev.filter(p => p !== "corpo-todo");
+        if (filtered.includes(bodyPart)) {
+          return filtered.filter(p => p !== bodyPart);
+        }
+        return [...filtered, bodyPart];
+      });
+    }
+  };
+
+  const bodyParts = [
+    { id: "perna", label: "Perna" },
+    { id: "peito", label: "Peito" },
+    { id: "costas", label: "Costas" },
+    { id: "ombro", label: "Ombro" },
+    { id: "biceps", label: "Bíceps" },
+    { id: "triceps", label: "Tríceps" },
+    { id: "abdomen", label: "Abdômen" },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10 py-12 px-4">
@@ -233,12 +264,55 @@ const Onboarding = () => {
               />
             </div>
 
+            <div>
+              <Label>Preferências de Partes do Corpo (opcional)</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Selecione as partes do corpo que você quer focar mais no treino
+              </p>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2 p-3 rounded-lg border bg-accent/5">
+                  <Checkbox
+                    id="corpo-todo"
+                    checked={bodyPartPreferences.includes("corpo-todo")}
+                    onCheckedChange={() => toggleBodyPart("corpo-todo")}
+                  />
+                  <Label 
+                    htmlFor="corpo-todo" 
+                    className="font-semibold cursor-pointer"
+                  >
+                    Corpo Todo (sem preferências específicas)
+                  </Label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {bodyParts.map(part => (
+                    <div key={part.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={part.id}
+                        checked={bodyPartPreferences.includes(part.id)}
+                        onCheckedChange={() => toggleBodyPart(part.id)}
+                        disabled={bodyPartPreferences.includes("corpo-todo")}
+                      />
+                      <Label 
+                        htmlFor={part.id}
+                        className="cursor-pointer"
+                      >
+                        {part.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? "Criando perfil..." : "Criar Perfil e Gerar Treinos"}
             </Button>
           </form>
         </div>
       </div>
+      <AiChat />
     </div>
   );
 };

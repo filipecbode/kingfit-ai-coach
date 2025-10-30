@@ -37,6 +37,12 @@ serve(async (req) => {
       'forca': 'ganhar força muscular'
     };
 
+    const bodyPreferencesText = profile.body_part_preferences && profile.body_part_preferences.length > 0
+      ? profile.body_part_preferences.includes("corpo-todo")
+        ? "Treino equilibrado para corpo todo"
+        : `IMPORTANTE: Dar mais ênfase e volume para: ${profile.body_part_preferences.join(", ")}`
+      : "";
+
     const prompt = `Você é um personal trainer profissional. Crie um plano de treinos mensal personalizado para:
 
 Nome: ${profile.name}
@@ -49,6 +55,7 @@ Nível: ${profile.experience_level}
 Dias por semana: ${profile.days_per_week}
 Horas por dia: ${profile.hours_per_day}h
 ${profile.health_issues ? `Restrições: ${profile.health_issues}` : ""}
+${bodyPreferencesText ? `Preferências: ${bodyPreferencesText}` : ""}
 
 Crie um plano distribuído em ${profile.days_per_week} dias por semana começando pela segunda-feira. Para cada dia, forneça:
 - Título do treino (ex: "Treino de Peito e Tríceps")

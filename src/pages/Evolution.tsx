@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Upload, TrendingUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { AiChat } from "@/components/AiChat";
 
 const motivationalMessages = [
   "Sua jornada de transformação está apenas começando! 💪",
@@ -350,6 +351,7 @@ export default function Evolution() {
           </Card>
         )}
       </div>
+      <AiChat />
     </div>
   );
 }

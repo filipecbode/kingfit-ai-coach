@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dumbbell, MessageSquare, PlayCircle, Sparkles, Clock, Video, Check } from "lucide-react";
+import { AiChat } from "@/components/AiChat";
 
 const Index = () => {
   return (
@@ -214,6 +215,7 @@ const Index = () => {
           </div>
         </div>
       </section>
+      <AiChat />
     </div>
   );
 };
