@@ -29,6 +29,14 @@ serve(async (req) => {
     if (!user) throw new Error("User not found");
 
     // Generate workout plan with AI
+    const goalDescriptions: Record<string, string> = {
+      'hipertrofia': 'ganhar massa muscular e hipertrofia',
+      'emagrecimento': 'perder peso e emagrecer',
+      'saude': 'melhorar saúde e bem-estar geral',
+      'condicionamento': 'melhorar condicionamento físico',
+      'forca': 'ganhar força muscular'
+    };
+
     const prompt = `Você é um personal trainer profissional. Crie um plano de treinos mensal personalizado para:
 
 Nome: ${profile.name}
@@ -36,15 +44,20 @@ Idade: ${profile.age} anos
 Peso: ${profile.weight}kg
 Altura: ${profile.height}cm
 Sexo: ${profile.gender}
-Objetivo: ${profile.goal}
+Objetivo: ${goalDescriptions[profile.goal] || profile.goal}
 Nível: ${profile.experience_level}
 Dias por semana: ${profile.days_per_week}
 Horas por dia: ${profile.hours_per_day}h
 ${profile.health_issues ? `Restrições: ${profile.health_issues}` : ""}
 
-Crie um plano distribuído em ${profile.days_per_week} dias por semana. Para cada dia, forneça:
+Crie um plano distribuído em ${profile.days_per_week} dias por semana começando pela segunda-feira. Para cada dia, forneça:
 - Título do treino (ex: "Treino de Peito e Tríceps")
-- Lista de 4-6 exercícios com nome, séries e repetições
+- Lista de 4-6 exercícios com nome, séries, repetições e tempo de descanso
+
+IMPORTANTE: 
+- Use day_of_week: 1 para segunda, 2 para terça, 3 para quarta, 4 para quinta, 5 para sexta, 6 para sábado, 0 para domingo
+- Sempre comece pela segunda-feira (day_of_week: 1)
+- Inclua sempre o tempo de descanso (rest) para cada exercício em formato legível (ex: "60 segundos", "1-2 minutos")
 
 Responda APENAS com JSON válido neste formato:
 {
@@ -55,7 +68,7 @@ Responda APENAS com JSON válido neste formato:
       "day_of_week": 1,
       "title": "Nome do Treino",
       "exercises": [
-        {"name": "Nome do Exercício", "sets": 3, "reps": "12"}
+        {"name": "Nome do Exercício", "sets": 3, "reps": "12", "rest": "60 segundos"}
       ]
     }
   ]

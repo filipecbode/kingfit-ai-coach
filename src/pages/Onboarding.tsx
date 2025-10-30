@@ -159,13 +159,18 @@ const Onboarding = () => {
 
             <div>
               <Label htmlFor="goal">Qual é o seu objetivo?</Label>
-              <Input
-                id="goal"
-                value={formData.goal}
-                onChange={(e) => updateField("goal", e.target.value)}
-                required
-                placeholder="Ex: Perder peso, ganhar massa, melhorar condicionamento"
-              />
+              <Select value={formData.goal} onValueChange={(value) => updateField("goal", value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione seu objetivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hipertrofia">Hipertrofia (Ganhar Massa Muscular)</SelectItem>
+                  <SelectItem value="emagrecimento">Emagrecimento (Perder Peso)</SelectItem>
+                  <SelectItem value="saude">Saúde e Bem-estar</SelectItem>
+                  <SelectItem value="condicionamento">Condicionamento Físico</SelectItem>
+                  <SelectItem value="forca">Ganhar Força</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
