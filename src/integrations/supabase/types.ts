@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      evolution_records: {
+        Row: {
+          back_photo_url: string | null
+          created_at: string
+          front_photo_url: string | null
+          id: string
+          notes: string | null
+          record_date: string
+          side_photo_url: string | null
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          back_photo_url?: string | null
+          created_at?: string
+          front_photo_url?: string | null
+          id?: string
+          notes?: string | null
+          record_date?: string
+          side_photo_url?: string | null
+          user_id: string
+          weight: number
+        }
+        Update: {
+          back_photo_url?: string | null
+          created_at?: string
+          front_photo_url?: string | null
+          id?: string
+          notes?: string | null
+          record_date?: string
+          side_photo_url?: string | null
+          user_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_profile"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number

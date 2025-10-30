@@ -137,10 +137,16 @@ const Dashboard = () => {
             <Dumbbell className="h-8 w-8 text-primary" />
             <span className="text-2xl font-black">KINGFIT</span>
           </div>
-          <Button variant="ghost" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate("/evolution")}>
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Evolução
+            </Button>
+            <Button variant="ghost" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
