@@ -53,10 +53,12 @@ export default {
         'gradient-primary': 'var(--gradient-primary)',
         'gradient-secondary': 'var(--gradient-secondary)',
         'gradient-hero': 'var(--gradient-hero)',
+        'gradient-cta': 'var(--gradient-cta)',
       },
       boxShadow: {
         'elegant': 'var(--shadow-elegant)',
         'glow': 'var(--shadow-glow)',
+        'intense': 'var(--shadow-intense)',
       },
       transitionProperty: {
         'smooth': 'var(--transition-smooth)',
