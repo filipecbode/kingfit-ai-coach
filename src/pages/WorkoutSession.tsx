@@ -75,13 +75,18 @@ const WorkoutSession = () => {
 
       const parsedWorkout = {
         ...workoutData,
-        exercises: workoutData.exercises as unknown as Exercise[]
+        exercises: [...(workoutData.exercises as unknown as Exercise[])]
       };
 
-      // Initialize completed exercises array
+      // Initialize completed exercises array based on workout completion status
       const initialCompleted = new Array(parsedWorkout.exercises.length).fill(false);
       
-      // Mark replaced/completed exercises
+      // If workout is completed, mark all as completed
+      if (workoutData.completed) {
+        initialCompleted.fill(true);
+      }
+      
+      // Mark replaced/completed exercises and update with new exercise
       if (replacements && replacements.length > 0) {
         replacements.forEach(replacement => {
           // Mark replaced exercises as completed if they were completed
@@ -158,6 +163,18 @@ const WorkoutSession = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Get original exercise name before replacement
+      const { data: workoutData } = await supabase
+        .from('workouts')
+        .select('exercises, plan_id, day_of_week')
+        .eq('id', workoutId)
+        .single();
+
+      if (!workoutData) throw new Error("Workout not found");
+
+      const originalExercises = workoutData.exercises as unknown as Exercise[];
+      const originalExercise = originalExercises[currentRealIndex];
+
       const { data, error } = await supabase.functions.invoke('replace-exercise', {
         body: { exercise: currentExercise }
       });
@@ -167,13 +184,13 @@ const WorkoutSession = () => {
       const newExercise = data.newExercise;
 
       if (replaceScope === 'day') {
-        // Trocar apenas no treino atual
+        // Trocar apenas este exercício no treino atual
         const { error: insertError } = await supabase
           .from('exercise_replacements')
           .insert({
             workout_id: workoutId,
             user_id: user.id,
-            original_exercise: currentExercise as any,
+            original_exercise: originalExercise as any,
             new_exercise: newExercise as any,
             original_index: currentRealIndex,
             completed: false
@@ -181,33 +198,25 @@ const WorkoutSession = () => {
 
         if (insertError) throw insertError;
       } else {
-        // Trocar em todos os treinos do mesmo dia da semana no plano
-        const { data: currentWorkout } = await supabase
+        // Trocar este exercício em todos os treinos do mesmo dia da semana no mês
+        const { data: workoutsToUpdate } = await supabase
           .from('workouts')
-          .select('plan_id, day_of_week')
-          .eq('id', workoutId)
-          .single();
+          .select('id')
+          .eq('plan_id', workoutData.plan_id)
+          .eq('day_of_week', workoutData.day_of_week);
 
-        if (currentWorkout) {
-          const { data: workoutsToUpdate } = await supabase
-            .from('workouts')
-            .select('id')
-            .eq('plan_id', currentWorkout.plan_id)
-            .eq('day_of_week', currentWorkout.day_of_week);
-
-          if (workoutsToUpdate) {
-            for (const w of workoutsToUpdate) {
-              await supabase
-                .from('exercise_replacements')
-                .insert({
-                  workout_id: w.id,
-                  user_id: user.id,
-                  original_exercise: currentExercise as any,
-                  new_exercise: newExercise as any,
-                  original_index: currentRealIndex,
-                  completed: false
-                } as any);
-            }
+        if (workoutsToUpdate) {
+          for (const w of workoutsToUpdate) {
+            await supabase
+              .from('exercise_replacements')
+              .insert({
+                workout_id: w.id,
+                user_id: user.id,
+                original_exercise: originalExercise as any,
+                new_exercise: newExercise as any,
+                original_index: currentRealIndex,
+                completed: false
+              } as any);
           }
         }
       }
@@ -218,7 +227,7 @@ const WorkoutSession = () => {
         title: "Exercício trocado!",
         description: replaceScope === 'day' 
           ? `${currentExercise.name} foi substituído por ${newExercise.name} apenas hoje`
-          : `${currentExercise.name} foi substituído por ${newExercise.name} em todos os treinos do mês`,
+          : `${currentExercise.name} foi substituído por ${newExercise.name} em todos os treinos deste dia da semana no mês`,
       });
     } catch (error: any) {
       console.error('Error replacing exercise:', error);
@@ -332,6 +341,7 @@ const WorkoutSession = () => {
               {workout.exercises.map((exercise, idx) => {
                 const isCompleted = completedExercises[idx];
                 const isReplaced = replacedExercises.some(r => r.original_index === idx);
+                const isPending = !isCompleted && !isReplaced;
                 
                 return (
                   <div key={idx} className="p-4 border border-border rounded-lg">
@@ -349,10 +359,15 @@ const WorkoutSession = () => {
                             Concluído
                           </div>
                         )}
-                        {isReplaced && (
+                        {isReplaced && !isCompleted && (
                           <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium whitespace-nowrap">
                             <RefreshCw className="h-3 w-3" />
                             Trocado
+                          </div>
+                        )}
+                        {isPending && (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium whitespace-nowrap">
+                            A fazer
                           </div>
                         )}
                       </div>
