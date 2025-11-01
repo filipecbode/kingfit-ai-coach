@@ -117,6 +117,17 @@ Responda APENAS com JSON válido neste formato:
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 30);
 
+    // Delete old workout plans for this user to avoid duplicate key error
+    const { error: deleteError } = await supabase
+      .from("workout_plans")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (deleteError) {
+      console.error("Error deleting old plans:", deleteError);
+      // Continue anyway - the unique constraint will prevent duplicates
+    }
+
     // Create workout plan
     const { data: plan, error: planError } = await supabase
       .from("workout_plans")
