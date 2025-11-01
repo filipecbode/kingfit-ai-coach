@@ -117,7 +117,7 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const weekDays = ["", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
   if (loading) {
     return (
@@ -195,7 +195,8 @@ const Dashboard = () => {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {workouts.map((workout) => {
-                const isToday = workout.day_of_week === new Date().getDay();
+                const today = new Date().getDay();
+                const isToday = workout.day_of_week === (today === 0 ? 7 : today);
                 return (
                   <Card 
                     key={workout.id} 

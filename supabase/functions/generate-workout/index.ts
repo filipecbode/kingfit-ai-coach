@@ -62,8 +62,9 @@ Crie um plano distribuído em ${profile.days_per_week} dias por semana começand
 - Lista de 4-6 exercícios com nome, séries, repetições e tempo de descanso
 
 IMPORTANTE: 
-- Use day_of_week: 1 para segunda, 2 para terça, 3 para quarta, 4 para quinta, 5 para sexta, 6 para sábado, 0 para domingo
+- Use day_of_week: 1 para segunda, 2 para terça, 3 para quarta, 4 para quinta, 5 para sexta, 6 para sábado, 7 para domingo
 - Sempre comece pela segunda-feira (day_of_week: 1)
+- Os valores de day_of_week devem estar entre 1 e 7 (nunca use 0)
 - Inclua sempre o tempo de descanso (rest) para cada exercício em formato legível (ex: "60 segundos", "1-2 minutos")
 
 Responda APENAS com JSON válido neste formato:

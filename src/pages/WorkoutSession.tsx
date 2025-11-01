@@ -45,7 +45,7 @@ const WorkoutSession = () => {
   const { workoutId } = useParams();
   const { toast } = useToast();
 
-  const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const weekDays = ["", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
   useEffect(() => {
     loadWorkout();
