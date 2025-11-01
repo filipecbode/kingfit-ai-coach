@@ -65,6 +65,8 @@ IMPORTANTE:
 - Use day_of_week: 1 para segunda, 2 para terça, 3 para quarta, 4 para quinta, 5 para sexta, 6 para sábado, 7 para domingo
 - Sempre comece pela segunda-feira (day_of_week: 1)
 - Os valores de day_of_week devem estar entre 1 e 7 (nunca use 0)
+- CRÍTICO: Se days_per_week for MENOR que 7, NUNCA use domingo (day_of_week: 7). Domingo só pode ser usado quando days_per_week = 7
+- Distribua os treinos de segunda a sábado quando days_per_week < 7
 - Inclua sempre o tempo de descanso (rest) para cada exercício em formato legível (ex: "60 segundos", "1-2 minutos")
 
 Responda APENAS com JSON válido neste formato:
