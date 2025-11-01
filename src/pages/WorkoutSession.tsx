@@ -311,7 +311,12 @@ const WorkoutSession = () => {
     );
   }
 
-  if (!workout || !currentExercise) return null;
+  if (!workout) return null;
+
+  // Se o treino está completo e não há exercícios pendentes, mostrar apenas a visualização
+  const workoutCompleted = workout.completed || (exerciseOrder.length === 0 && completedExercises.every(Boolean));
+  
+  if (!currentExercise && !workoutCompleted) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10">
@@ -329,10 +334,19 @@ const WorkoutSession = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
-        {!started ? (
+        {!started || workoutCompleted ? (
           <Card className="p-8 text-center">
             <h1 className="text-3xl font-bold mb-2">{workout.title}</h1>
             <p className="text-muted-foreground mb-6">{weekDays[workout.day_of_week]}</p>
+            
+            {workoutCompleted && (
+              <div className="mb-6 p-4 bg-primary/10 rounded-lg">
+                <p className="text-primary font-bold text-lg">✅ Treino Concluído!</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Confira abaixo os exercícios realizados
+                </p>
+              </div>
+            )}
             
             <div className="space-y-4 mb-8">
               <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
@@ -381,9 +395,11 @@ const WorkoutSession = () => {
               })}
             </div>
 
-            <Button onClick={handleStartWorkout} size="lg" className="w-full">
-              Começar Treino
-            </Button>
+            {!workoutCompleted && (
+              <Button onClick={handleStartWorkout} size="lg" className="w-full">
+                Começar Treino
+              </Button>
+            )}
           </Card>
         ) : (
           <div className="space-y-6">
