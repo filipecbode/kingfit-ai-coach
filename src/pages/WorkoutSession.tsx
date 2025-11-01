@@ -78,30 +78,31 @@ const WorkoutSession = () => {
         exercises: [...(workoutData.exercises as unknown as Exercise[])]
       };
 
-      // Initialize completed exercises array based on workout completion status
+      // Initialize completed exercises array
       const initialCompleted = new Array(parsedWorkout.exercises.length).fill(false);
       
       // If workout is completed, mark all as completed
       if (workoutData.completed) {
         initialCompleted.fill(true);
-      }
-      
-      // Mark replaced/completed exercises and update with new exercise
-      if (replacements && replacements.length > 0) {
-        replacements.forEach(replacement => {
-          // Mark replaced exercises as completed if they were completed
-          if (replacement.completed) {
-            initialCompleted[replacement.original_index] = true;
-          }
-          // Update exercise with replacement
-          parsedWorkout.exercises[replacement.original_index] = replacement.new_exercise as unknown as Exercise;
-        });
+      } else {
+        // Mark replaced/completed exercises
+        if (replacements && replacements.length > 0) {
+          replacements.forEach(replacement => {
+            // Mark replaced exercises as completed if they were completed
+            if (replacement.completed) {
+              initialCompleted[replacement.original_index] = true;
+            }
+            // Update exercise with replacement
+            parsedWorkout.exercises[replacement.original_index] = replacement.new_exercise as unknown as Exercise;
+          });
+        }
       }
 
       setWorkout(parsedWorkout);
       setReplacedExercises(replacements || []);
       setCompletedExercises(initialCompleted);
       
+      // Only set exercise order if not started yet or starting fresh
       // Remove already completed exercises from the order
       const activeExercises = Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i)
         .filter(i => !initialCompleted[i]);
@@ -120,6 +121,9 @@ const WorkoutSession = () => {
   };
 
   const handleStartWorkout = () => {
+    // Filter to show only exercises that are not completed (status "a fazer")
+    const pendingExercises = exerciseOrder.filter(idx => !completedExercises[idx]);
+    setExerciseOrder(pendingExercises);
     setStarted(true);
   };
 
