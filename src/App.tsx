@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import WorkoutSession from "./pages/WorkoutSession";
 import Evolution from "./pages/Evolution";
 import Stretching from "./pages/Stretching";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/workout/:workoutId" element={<WorkoutSession />} />
           <Route path="/evolution" element={<Evolution />} />
           <Route path="/stretching" element={<Stretching />} />
+          <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -4,9 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Dumbbell, LogOut, Calendar, TrendingUp, Activity } from "lucide-react";
+import { Dumbbell, LogOut, Calendar, TrendingUp, Activity, User } from "lucide-react";
 import { AiChat } from "@/components/AiChat";
 import { GoalSelectionDialog } from "@/components/GoalSelectionDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -78,13 +85,17 @@ const Dashboard = () => {
         // Resetar status de concluído se passou 24h
         if (workoutsData) {
           const now = new Date();
+          now.setHours(0, 0, 0, 0); // Normalize to start of today
+          
           const updatedWorkouts = await Promise.all(
             workoutsData.map(async (workout) => {
               if (workout.completed && workout.completed_date) {
                 const completedDate = new Date(workout.completed_date);
-                const hoursSinceCompleted = (now.getTime() - completedDate.getTime()) / (1000 * 60 * 60);
+                completedDate.setHours(0, 0, 0, 0); // Normalize to start of completed day
                 
-                if (hoursSinceCompleted >= 24) {
+                const daysDiff = Math.floor((now.getTime() - completedDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysDiff >= 1) {
                   await supabase
                     .from("workouts")
                     .update({ completed: false, completed_at: null, completed_date: null })
@@ -198,10 +209,28 @@ const Dashboard = () => {
               <Activity className="h-4 w-4 mr-2" />
               Alongamento
             </Button>
-            <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url} />
+                    <AvatarFallback>
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  <User className="h-4 w-4 mr-2" />
+                  Dados Pessoais
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>

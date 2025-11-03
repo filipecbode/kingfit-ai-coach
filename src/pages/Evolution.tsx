@@ -7,9 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, TrendingUp } from "lucide-react";
+import { ArrowLeft, Upload, TrendingUp, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { AiChat } from "@/components/AiChat";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const motivationalMessages = [
   "Sua jornada de transformação está apenas começando! 💪",
@@ -39,6 +48,7 @@ export default function Evolution() {
   const [sidePhoto, setSidePhoto] = useState<File | null>(null);
   const [backPhoto, setBackPhoto] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -77,17 +87,22 @@ export default function Evolution() {
       if (records && records.length > 0) {
         setLastRecord(records[0]);
         
-        // Check if can submit new record (30 days since last)
+        // Check if can submit new record (7 days since last)
         const lastDate = new Date(records[0].record_date);
         const today = new Date();
         const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
         
+        // Show warning if more than 30 days without logging
         if (daysDiff >= 30) {
+          setShowWarning(true);
+        }
+        
+        if (daysDiff >= 7) {
           setCanSubmit(true);
           setDaysUntilNext(0);
         } else {
           setCanSubmit(false);
-          setDaysUntilNext(30 - daysDiff);
+          setDaysUntilNext(7 - daysDiff);
         }
       } else {
         setCanSubmit(true);
@@ -222,9 +237,9 @@ export default function Evolution() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Progress value={((30 - daysUntilNext) / 30) * 100} className="mb-4" />
+              <Progress value={((7 - daysUntilNext) / 7) * 100} className="mb-4" />
               <p className="text-sm text-muted-foreground">
-                Continue firme nos treinos! Em {daysUntilNext} dias você poderá registrar sua evolução mensal.
+                Continue firme nos treinos! Em {daysUntilNext} dias você poderá registrar sua evolução semanal.
               </p>
             </CardContent>
           </Card>
@@ -233,7 +248,7 @@ export default function Evolution() {
             <CardHeader>
               <CardTitle>Registre Sua Evolução</CardTitle>
               <CardDescription>
-                Acompanhe seu progresso com fotos e medidas mensais
+                Acompanhe seu progresso com fotos e medidas semanais
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -351,6 +366,28 @@ export default function Evolution() {
           </Card>
         )}
       </div>
+      
+      <AlertDialog open={showWarning} onOpenChange={setShowWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              Lembrete de Evolução
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Já faz mais de 30 dias desde seu último registro de evolução! 
+              Acompanhar seu progresso regularmente é importante para alcançar seus objetivos. 
+              Que tal registrar sua evolução agora?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowWarning(false)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <AiChat />
     </div>
   );

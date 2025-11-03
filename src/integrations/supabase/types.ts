@@ -102,6 +102,7 @@ export type Database = {
       profiles: {
         Row: {
           age: number
+          avatar_url: string | null
           body_part_preferences: string[] | null
           created_at: string | null
           days_per_week: number
@@ -118,6 +119,7 @@ export type Database = {
         }
         Insert: {
           age: number
+          avatar_url?: string | null
           body_part_preferences?: string[] | null
           created_at?: string | null
           days_per_week: number
@@ -134,6 +136,7 @@ export type Database = {
         }
         Update: {
           age?: number
+          avatar_url?: string | null
           body_part_preferences?: string[] | null
           created_at?: string | null
           days_per_week?: number
