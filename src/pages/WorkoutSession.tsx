@@ -270,9 +270,14 @@ const WorkoutSession = () => {
 
   const completeWorkout = async () => {
     try {
+      const now = new Date();
       const { error } = await supabase
         .from("workouts")
-        .update({ completed: true, completed_at: new Date().toISOString() })
+        .update({ 
+          completed: true, 
+          completed_at: now.toISOString(),
+          completed_date: now.toISOString().split('T')[0]
+        })
         .eq("id", workoutId);
 
       if (error) throw error;

@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.n8n-chat]
 verify_jwt = true
+
+[functions.generate-stretching]
+verify_jwt = true

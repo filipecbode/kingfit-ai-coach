@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Dumbbell, LogOut, Calendar, TrendingUp } from "lucide-react";
+import { Dumbbell, LogOut, Calendar, TrendingUp, Activity } from "lucide-react";
 import { AiChat } from "@/components/AiChat";
+import { GoalSelectionDialog } from "@/components/GoalSelectionDialog";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -13,6 +14,7 @@ const Dashboard = () => {
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [showGoalDialog, setShowGoalDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -73,7 +75,28 @@ const Dashboard = () => {
           .eq("plan_id", planData.id)
           .order("day_of_week", { ascending: true });
 
-        setWorkouts(workoutsData || []);
+        // Resetar status de concluído se passou 24h
+        if (workoutsData) {
+          const now = new Date();
+          const updatedWorkouts = await Promise.all(
+            workoutsData.map(async (workout) => {
+              if (workout.completed && workout.completed_date) {
+                const completedDate = new Date(workout.completed_date);
+                const hoursSinceCompleted = (now.getTime() - completedDate.getTime()) / (1000 * 60 * 60);
+                
+                if (hoursSinceCompleted >= 24) {
+                  await supabase
+                    .from("workouts")
+                    .update({ completed: false, completed_at: null, completed_date: null })
+                    .eq("id", workout.id);
+                  return { ...workout, completed: false, completed_at: null, completed_date: null };
+                }
+              }
+              return workout;
+            })
+          );
+          setWorkouts(updatedWorkouts);
+        }
       }
     } catch (error: any) {
       toast({
@@ -86,11 +109,31 @@ const Dashboard = () => {
     }
   };
 
-  const generateWorkoutPlan = async () => {
+  const generateWorkoutPlan = async (newGoal?: string, bodyParts?: string[]) => {
     setGenerating(true);
     try {
+      // Se tem novo objetivo, atualizar o perfil primeiro
+      let updatedProfile = profile;
+      if (newGoal) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update({ 
+              goal: newGoal,
+              body_part_preferences: bodyParts || []
+            })
+            .eq("id", user.id);
+
+          if (updateError) throw updateError;
+          
+          updatedProfile = { ...profile, goal: newGoal, body_part_preferences: bodyParts };
+          setProfile(updatedProfile);
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("generate-workout", {
-        body: { profile },
+        body: { profile: updatedProfile },
       });
 
       if (error) throw error;
@@ -110,6 +153,14 @@ const Dashboard = () => {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleNewPlanClick = () => {
+    setShowGoalDialog(true);
+  };
+
+  const handleGoalConfirm = (goal: string, bodyParts: string[]) => {
+    generateWorkoutPlan(goal, bodyParts);
   };
 
   const handleLogout = async () => {
@@ -143,6 +194,10 @@ const Dashboard = () => {
               <TrendingUp className="h-4 w-4 mr-2" />
               Evolução
             </Button>
+            <Button variant="ghost" onClick={() => navigate("/stretching")}>
+              <Activity className="h-4 w-4 mr-2" />
+              Alongamento
+            </Button>
             <Button variant="ghost" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Sair
@@ -166,7 +221,7 @@ const Dashboard = () => {
             <p className="text-muted-foreground mb-6">
               Vamos criar um plano personalizado baseado no seu perfil!
             </p>
-            <Button onClick={generateWorkoutPlan} disabled={generating} size="lg">
+            <Button onClick={() => generateWorkoutPlan()} disabled={generating} size="lg">
               {generating ? "Gerando..." : "Gerar Plano Mensal"}
             </Button>
           </Card>
@@ -178,7 +233,7 @@ const Dashboard = () => {
                   <h2 className="text-2xl font-bold">{workoutPlan.title}</h2>
                   <p className="text-muted-foreground">{workoutPlan.description}</p>
                 </div>
-                <Button onClick={generateWorkoutPlan} disabled={generating}>
+                <Button onClick={handleNewPlanClick} disabled={generating}>
                   <TrendingUp className="h-4 w-4 mr-2" />
                   {generating ? "Gerando..." : "Novo Plano"}
                 </Button>
@@ -246,6 +301,13 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+      
+      <GoalSelectionDialog
+        open={showGoalDialog}
+        onClose={() => setShowGoalDialog(false)}
+        onConfirm={handleGoalConfirm}
+        currentGoal={profile?.goal}
+      />
       
       <AiChat />
     </div>

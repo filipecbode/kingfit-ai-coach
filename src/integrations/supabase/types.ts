@@ -150,6 +150,44 @@ export type Database = {
         }
         Relationships: []
       }
+      stretching_sessions: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          stretches: Json
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          stretches: Json
+          user_id: string
+          workout_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          stretches?: Json
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stretching_sessions_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_plans: {
         Row: {
           created_at: string | null
@@ -192,6 +230,7 @@ export type Database = {
         Row: {
           completed: boolean | null
           completed_at: string | null
+          completed_date: string | null
           created_at: string | null
           day_of_week: number
           exercises: Json
@@ -202,6 +241,7 @@ export type Database = {
         Insert: {
           completed?: boolean | null
           completed_at?: string | null
+          completed_date?: string | null
           created_at?: string | null
           day_of_week: number
           exercises: Json
@@ -212,6 +252,7 @@ export type Database = {
         Update: {
           completed?: boolean | null
           completed_at?: string | null
+          completed_date?: string | null
           created_at?: string | null
           day_of_week?: number
           exercises?: Json

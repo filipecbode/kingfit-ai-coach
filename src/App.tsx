@@ -9,6 +9,7 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import WorkoutSession from "./pages/WorkoutSession";
 import Evolution from "./pages/Evolution";
+import Stretching from "./pages/Stretching";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/workout/:workoutId" element={<WorkoutSession />} />
           <Route path="/evolution" element={<Evolution />} />
+          <Route path="/stretching" element={<Stretching />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
