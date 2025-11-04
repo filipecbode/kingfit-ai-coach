@@ -49,6 +49,10 @@ export default function Evolution() {
   const [backPhoto, setBackPhoto] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [allRecords, setAllRecords] = useState<any[]>([]);
+  const [showComparison, setShowComparison] = useState(false);
+  const [beforeRecord, setBeforeRecord] = useState<string>("");
+  const [afterRecord, setAfterRecord] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -76,15 +80,15 @@ export default function Evolution() {
         .single();
       setProfile(profileData);
 
-      // Load last evolution record
+      // Load all evolution records
       const { data: records } = await supabase
         .from("evolution_records")
         .select("*")
         .eq("user_id", user.id)
-        .order("record_date", { ascending: false })
-        .limit(1);
+        .order("record_date", { ascending: false });
 
       if (records && records.length > 0) {
+        setAllRecords(records);
         setLastRecord(records[0]);
         
         // Check if can submit new record (7 days since last)
@@ -361,6 +365,176 @@ export default function Evolution() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   <strong>Observações:</strong> {lastRecord.notes}
                 </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {allRecords.length >= 2 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Antes e Depois</CardTitle>
+              <CardDescription>
+                Compare sua evolução ao longo do tempo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!showComparison ? (
+                <Button onClick={() => setShowComparison(true)} className="w-full">
+                  Ver Comparação
+                </Button>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="before">Antes (Registro Antigo)</Label>
+                      <select
+                        id="before"
+                        className="w-full mt-2 p-2 border rounded-md"
+                        value={beforeRecord}
+                        onChange={(e) => setBeforeRecord(e.target.value)}
+                      >
+                        <option value="">Selecione...</option>
+                        {allRecords.map((record) => (
+                          <option key={record.id} value={record.id}>
+                            {new Date(record.record_date).toLocaleDateString('pt-BR')} - {record.weight}kg
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="after">Depois (Registro Recente)</Label>
+                      <select
+                        id="after"
+                        className="w-full mt-2 p-2 border rounded-md"
+                        value={afterRecord}
+                        onChange={(e) => setAfterRecord(e.target.value)}
+                      >
+                        <option value="">Selecione...</option>
+                        {allRecords.map((record) => (
+                          <option key={record.id} value={record.id}>
+                            {new Date(record.record_date).toLocaleDateString('pt-BR')} - {record.weight}kg
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {beforeRecord && afterRecord && (() => {
+                    const before = allRecords.find(r => r.id === beforeRecord);
+                    const after = allRecords.find(r => r.id === afterRecord);
+                    
+                    if (!before || !after) return null;
+                    
+                    const weightDiff = after.weight - before.weight;
+                    
+                    return (
+                      <div className="mt-6 space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base">Antes</CardTitle>
+                              <CardDescription>
+                                {new Date(before.record_date).toLocaleDateString('pt-BR')}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-2xl font-bold mb-4">{before.weight} kg</p>
+                              {before.notes && (
+                                <p className="text-sm text-muted-foreground">{before.notes}</p>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base">Depois</CardTitle>
+                              <CardDescription>
+                                {new Date(after.record_date).toLocaleDateString('pt-BR')}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-2xl font-bold mb-4">{after.weight} kg</p>
+                              {after.notes && (
+                                <p className="text-sm text-muted-foreground">{after.notes}</p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        <Card className={`${weightDiff < 0 ? 'border-green-500/50' : weightDiff > 0 ? 'border-yellow-500/50' : ''}`}>
+                          <CardContent className="pt-6">
+                            <div className="text-center">
+                              <p className="text-sm text-muted-foreground mb-2">Diferença</p>
+                              <p className={`text-3xl font-bold ${weightDiff < 0 ? 'text-green-600' : weightDiff > 0 ? 'text-yellow-600' : ''}`}>
+                                {weightDiff > 0 ? '+' : ''}{weightDiff.toFixed(1)} kg
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <div className="space-y-4">
+                          <h4 className="font-semibold">Fotos da Evolução</h4>
+                          
+                          {(before.front_photo_url || after.front_photo_url) && (
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2">Frente</p>
+                              <div className="grid grid-cols-2 gap-4">
+                                {before.front_photo_url ? (
+                                  <img src={before.front_photo_url} alt="Antes - Frente" className="w-full h-48 object-cover rounded-lg" />
+                                ) : (
+                                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">Sem foto</div>
+                                )}
+                                {after.front_photo_url ? (
+                                  <img src={after.front_photo_url} alt="Depois - Frente" className="w-full h-48 object-cover rounded-lg" />
+                                ) : (
+                                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">Sem foto</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {(before.side_photo_url || after.side_photo_url) && (
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2">Lado</p>
+                              <div className="grid grid-cols-2 gap-4">
+                                {before.side_photo_url ? (
+                                  <img src={before.side_photo_url} alt="Antes - Lado" className="w-full h-48 object-cover rounded-lg" />
+                                ) : (
+                                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">Sem foto</div>
+                                )}
+                                {after.side_photo_url ? (
+                                  <img src={after.side_photo_url} alt="Depois - Lado" className="w-full h-48 object-cover rounded-lg" />
+                                ) : (
+                                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">Sem foto</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {(before.back_photo_url || after.back_photo_url) && (
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2">Costas</p>
+                              <div className="grid grid-cols-2 gap-4">
+                                {before.back_photo_url ? (
+                                  <img src={before.back_photo_url} alt="Antes - Costas" className="w-full h-48 object-cover rounded-lg" />
+                                ) : (
+                                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">Sem foto</div>
+                                )}
+                                {after.back_photo_url ? (
+                                  <img src={after.back_photo_url} alt="Depois - Costas" className="w-full h-48 object-cover rounded-lg" />
+                                ) : (
+                                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">Sem foto</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
             </CardContent>
           </Card>

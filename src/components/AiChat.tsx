@@ -84,14 +84,21 @@ export const AiChat = () => {
 
   return (
     <Card className="fixed bottom-6 right-6 w-96 h-[600px] shadow-2xl flex flex-col z-50">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-primary" />
-          <h3 className="font-bold">Assistente KINGFIT</h3>
+      <div className="border-b">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-primary" />
+            <h3 className="font-bold">Assistente KINGFIT</h3>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="px-4 pb-3">
+          <p className="text-sm text-muted-foreground">
+            Fale com a nossa IA sobre treinos, dieta e fitness! 💪
+          </p>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
