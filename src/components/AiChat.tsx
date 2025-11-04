@@ -72,9 +72,9 @@ export const AiChat = () => {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
-        <div className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full shadow-md">
-          Fale com nossa IA 💪
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-2">
+        <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full shadow-md">
+          Oi 💪
         </div>
         <Button
           onClick={() => setIsOpen(true)}
