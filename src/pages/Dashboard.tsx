@@ -299,8 +299,9 @@ const Dashboard = () => {
                         )}
                       </div>
                       {workout.completed && (
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                          Concluído
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                          <span className="hidden sm:inline">Concluído</span>
+                          <span className="sm:hidden">✓</span>
                         </span>
                       )}
                     </div>

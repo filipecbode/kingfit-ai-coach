@@ -287,7 +287,10 @@ const WorkoutSession = () => {
         description: "Parabéns! Você completou o treino de hoje.",
       });
 
-      navigate("/dashboard");
+      // Aguardar um pouco para garantir que o banco foi atualizado
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 500);
     } catch (error: any) {
       toast({
         title: "Erro ao concluir treino",
@@ -375,22 +378,24 @@ const WorkoutSession = () => {
                           {exercise.sets} séries x {exercise.reps} repetições
                         </p>
                       </div>
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1 shrink-0">
                         {isCompleted && (
-                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium whitespace-nowrap">
-                            <Check className="h-3 w-3" />
-                            Concluído
+                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium min-w-[90px]">
+                            <Check className="h-3 w-3 shrink-0" />
+                            <span className="hidden sm:inline">Concluído</span>
+                            <span className="sm:hidden">OK</span>
                           </div>
                         )}
                         {isReplaced && !isCompleted && (
-                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium whitespace-nowrap">
-                            <RefreshCw className="h-3 w-3" />
-                            Trocado
+                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium min-w-[90px]">
+                            <RefreshCw className="h-3 w-3 shrink-0" />
+                            <span className="hidden sm:inline">Trocado</span>
+                            <span className="sm:hidden">Novo</span>
                           </div>
                         )}
                         {isPending && (
-                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium whitespace-nowrap">
-                            A fazer
+                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium min-w-[90px]">
+                            <span>À fazer</span>
                           </div>
                         )}
                       </div>
