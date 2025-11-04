@@ -69,7 +69,7 @@ const Index = () => {
               <div className="relative z-10 mx-auto max-w-md">
                 <div className="aspect-[9/16] rounded-3xl border-8 border-white/10 bg-gradient-to-br from-primary/20 to-secondary/20 p-8 shadow-intense backdrop-blur-sm">
                   <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-                    <Dumbbell className="h-20 w-20 text-accent" />
+                    <Dumbbell className="h-20 w-20 text-accent animate-[spin_3s_ease-in-out_infinite] drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
                     <p className="text-xl font-bold">App KingFit</p>
                     <p className="text-sm text-gray-300">Preview em breve</p>
                   </div>
