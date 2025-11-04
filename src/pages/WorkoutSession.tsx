@@ -81,19 +81,12 @@ const WorkoutSession = () => {
       // Initialize completed exercises array
       const initialCompleted = new Array(parsedWorkout.exercises.length).fill(false);
       
-      console.log('🔍 Dados do workout carregado:', {
-        id: workoutData.id,
-        completed: workoutData.completed,
-        completed_exercises_indices: workoutData.completed_exercises_indices
-      });
-      
       // If workout is completed, mark all as completed
       if (workoutData.completed) {
         initialCompleted.fill(true);
       } else {
         // Load completed exercises from saved indices
         if (workoutData.completed_exercises_indices && workoutData.completed_exercises_indices.length > 0) {
-          console.log('🔍 Marcando exercícios como concluídos:', workoutData.completed_exercises_indices);
           workoutData.completed_exercises_indices.forEach((idx: number) => {
             initialCompleted[idx] = true;
           });
@@ -145,40 +138,65 @@ const WorkoutSession = () => {
     const currentRealIndex = exerciseOrder[0];
     const newCompleted = [...completedExercises];
     newCompleted[currentRealIndex] = true;
-    setCompletedExercises(newCompleted);
 
     // Update workout with completed exercise index
     const completedIndices = newCompleted
       .map((completed, idx) => completed ? idx : -1)
       .filter(idx => idx !== -1);
     
-    console.log('🔍 Salvando índices concluídos:', completedIndices);
-    console.log('🔍 Workout ID:', workoutId);
+    // Check if this was the last exercise
+    const allExercisesCompleted = completedIndices.length === workout!.exercises.length;
     
-    const { data, error } = await supabase
-      .from('workouts')
-      .update({ completed_exercises_indices: completedIndices })
-      .eq('id', workoutId)
-      .select();
-    
-    console.log('🔍 Resposta do update:', data, error);
+    try {
+      // Update replacement as completed if it exists
+      const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
+      if (replacement) {
+        await supabase
+          .from('exercise_replacements')
+          .update({ completed: true })
+          .eq('id', replacement.id);
+      }
 
-    // Update replacement as completed if it exists
-    const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
-    if (replacement) {
-      await supabase
-        .from('exercise_replacements')
-        .update({ completed: true })
-        .eq('id', replacement.id);
-    }
+      // If all exercises completed, mark workout as completed
+      if (allExercisesCompleted) {
+        const now = new Date();
+        const { error } = await supabase
+          .from("workouts")
+          .update({ 
+            completed: true, 
+            completed_at: now.toISOString(),
+            completed_date: now.toISOString().split('T')[0],
+            completed_exercises_indices: completedIndices
+          })
+          .eq("id", workoutId);
 
-    const newOrder = exerciseOrder.slice(1);
-    setExerciseOrder(newOrder);
+        if (error) throw error;
 
-    if (newOrder.length === 0) {
-      setTimeout(() => {
-        completeWorkout();
-      }, 300);
+        toast({
+          title: "Treino concluído! 🎉",
+          description: "Parabéns! Você completou o treino de hoje.",
+        });
+
+        setTimeout(() => {
+          navigate("/dashboard", { replace: true });
+        }, 500);
+      } else {
+        // Just update the completed indices
+        await supabase
+          .from('workouts')
+          .update({ completed_exercises_indices: completedIndices })
+          .eq('id', workoutId);
+
+        setCompletedExercises(newCompleted);
+        const newOrder = exerciseOrder.slice(1);
+        setExerciseOrder(newOrder);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar treino",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -298,38 +316,6 @@ const WorkoutSession = () => {
     });
   };
 
-  const completeWorkout = async () => {
-    try {
-      const now = new Date();
-      
-      const { error } = await supabase
-        .from("workouts")
-        .update({ 
-          completed: true, 
-          completed_at: now.toISOString(),
-          completed_date: now.toISOString().split('T')[0]
-        })
-        .eq("id", workoutId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Treino concluído! 🎉",
-        description: "Parabéns! Você completou o treino de hoje.",
-      });
-
-      // Aguardar um pouco para garantir que o banco foi atualizado
-      setTimeout(() => {
-        navigate("/dashboard", { replace: true });
-      }, 500);
-    } catch (error: any) {
-      toast({
-        title: "Erro ao concluir treino",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   const progress = workout
     ? (completedExercises.filter(Boolean).length / workout.exercises.length) * 100
