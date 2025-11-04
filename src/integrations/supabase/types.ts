@@ -234,6 +234,7 @@ export type Database = {
           completed: boolean | null
           completed_at: string | null
           completed_date: string | null
+          completed_exercises_indices: number[] | null
           created_at: string | null
           day_of_week: number
           exercises: Json
@@ -245,6 +246,7 @@ export type Database = {
           completed?: boolean | null
           completed_at?: string | null
           completed_date?: string | null
+          completed_exercises_indices?: number[] | null
           created_at?: string | null
           day_of_week: number
           exercises: Json
@@ -256,6 +258,7 @@ export type Database = {
           completed?: boolean | null
           completed_at?: string | null
           completed_date?: string | null
+          completed_exercises_indices?: number[] | null
           created_at?: string | null
           day_of_week?: number
           exercises?: Json

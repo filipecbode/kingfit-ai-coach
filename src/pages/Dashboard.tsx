@@ -98,9 +98,20 @@ const Dashboard = () => {
                 if (daysDiff >= 1) {
                   await supabase
                     .from("workouts")
-                    .update({ completed: false, completed_at: null, completed_date: null })
+                    .update({ 
+                      completed: false, 
+                      completed_at: null, 
+                      completed_date: null,
+                      completed_exercises_indices: []
+                    })
                     .eq("id", workout.id);
-                  return { ...workout, completed: false, completed_at: null, completed_date: null };
+                  return { 
+                    ...workout, 
+                    completed: false, 
+                    completed_at: null, 
+                    completed_date: null,
+                    completed_exercises_indices: []
+                  };
                 }
               }
               return workout;

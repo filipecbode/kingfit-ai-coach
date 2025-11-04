@@ -66,12 +66,6 @@ const WorkoutSession = () => {
         .single();
 
       if (error) throw error;
-      
-      console.log('Workout data loaded:', { 
-        completed: workoutData.completed, 
-        completed_at: workoutData.completed_at,
-        exercises: workoutData.exercises 
-      });
 
       // Load replaced exercises
       const { data: replacements } = await supabase
@@ -89,16 +83,20 @@ const WorkoutSession = () => {
       
       // If workout is completed, mark all as completed
       if (workoutData.completed) {
-        console.log('Workout is completed, marking all exercises as completed');
         initialCompleted.fill(true);
       } else {
-        console.log('Workout not completed, checking replacements:', replacements);
+        // Load completed exercises from saved indices
+        if (workoutData.completed_exercises_indices && workoutData.completed_exercises_indices.length > 0) {
+          workoutData.completed_exercises_indices.forEach((idx: number) => {
+            initialCompleted[idx] = true;
+          });
+        }
+        
         // Mark replaced/completed exercises
         if (replacements && replacements.length > 0) {
           replacements.forEach(replacement => {
             // Mark replaced exercises as completed if they were completed
             if (replacement.completed) {
-              console.log('Marking replacement as completed:', replacement.original_index);
               initialCompleted[replacement.original_index] = true;
             }
             // Update exercise with replacement
@@ -106,8 +104,6 @@ const WorkoutSession = () => {
           });
         }
       }
-      
-      console.log('Initial completed array:', initialCompleted);
 
       setWorkout(parsedWorkout);
       setReplacedExercises(replacements || []);
@@ -143,6 +139,16 @@ const WorkoutSession = () => {
     const newCompleted = [...completedExercises];
     newCompleted[currentRealIndex] = true;
     setCompletedExercises(newCompleted);
+
+    // Update workout with completed exercise index
+    const completedIndices = newCompleted
+      .map((completed, idx) => completed ? idx : -1)
+      .filter(idx => idx !== -1);
+    
+    await supabase
+      .from('workouts')
+      .update({ completed_exercises_indices: completedIndices })
+      .eq('id', workoutId);
 
     // Update replacement as completed if it exists
     const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
@@ -282,7 +288,6 @@ const WorkoutSession = () => {
   const completeWorkout = async () => {
     try {
       const now = new Date();
-      console.log('Completing workout:', workoutId);
       
       const { error } = await supabase
         .from("workouts")
@@ -293,12 +298,7 @@ const WorkoutSession = () => {
         })
         .eq("id", workoutId);
 
-      if (error) {
-        console.error('Error completing workout:', error);
-        throw error;
-      }
-      
-      console.log('Workout marked as completed successfully');
+      if (error) throw error;
 
       toast({
         title: "Treino concluído! 🎉",
@@ -310,7 +310,6 @@ const WorkoutSession = () => {
         navigate("/dashboard", { replace: true });
       }, 500);
     } catch (error: any) {
-      console.error('Complete workout error:', error);
       toast({
         title: "Erro ao concluir treino",
         description: error.message,
@@ -387,13 +386,6 @@ const WorkoutSession = () => {
                 const isCompleted = completedExercises[idx];
                 const isReplaced = replacedExercises.some(r => r.original_index === idx);
                 const isPending = !isCompleted && !isReplaced;
-                
-                console.log(`Exercise ${idx} (${exercise.name}):`, { 
-                  isCompleted, 
-                  isReplaced, 
-                  isPending,
-                  completedExercisesValue: completedExercises[idx]
-                });
                 
                 return (
                   <div key={idx} className="p-4 border border-border rounded-lg">
