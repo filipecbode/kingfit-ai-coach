@@ -370,7 +370,19 @@ export default function Evolution() {
           </Card>
         )}
 
-        {allRecords.length >= 2 && (
+      {allRecords.length >= 2 && !showComparison && (
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Comparação de Evolução</h2>
+          <p className="text-muted-foreground mb-4">
+            Compare duas evoluções para ver seu progresso!
+          </p>
+          <Button onClick={() => setShowComparison(true)} className="w-full">
+            Ver Antes e Depois
+          </Button>
+        </Card>
+      )}
+
+      {showComparison && allRecords.length >= 2 && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Antes e Depois</CardTitle>
@@ -379,12 +391,7 @@ export default function Evolution() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!showComparison ? (
-                <Button onClick={() => setShowComparison(true)} className="w-full">
-                  Ver Comparação
-                </Button>
-              ) : (
-                <div className="space-y-6">
+              <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="before">Antes (Registro Antigo)</Label>
@@ -534,8 +541,15 @@ export default function Evolution() {
                       </div>
                     );
                   })()}
+
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowComparison(false)}
+                    className="w-full"
+                  >
+                    Fechar Comparação
+                  </Button>
                 </div>
-              )}
             </CardContent>
           </Card>
         )}

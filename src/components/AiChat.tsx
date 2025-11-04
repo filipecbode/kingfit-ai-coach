@@ -72,13 +72,18 @@ export const AiChat = () => {
 
   if (!isOpen) {
     return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        size="lg"
-        className="fixed bottom-6 right-6 rounded-full h-16 w-16 shadow-lg z-50"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </Button>
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        <div className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full shadow-md">
+          Fale com nossa IA 💪
+        </div>
+        <Button
+          onClick={() => setIsOpen(true)}
+          size="lg"
+          className="rounded-full h-16 w-16 shadow-lg"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </Button>
+      </div>
     );
   }
 
@@ -93,11 +98,6 @@ export const AiChat = () => {
           <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
-        </div>
-        <div className="px-4 pb-3">
-          <p className="text-sm text-muted-foreground">
-            Fale com a nossa IA sobre treinos, dieta e fitness! 💪
-          </p>
         </div>
       </div>
 
