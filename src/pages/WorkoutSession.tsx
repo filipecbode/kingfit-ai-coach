@@ -81,12 +81,19 @@ const WorkoutSession = () => {
       // Initialize completed exercises array
       const initialCompleted = new Array(parsedWorkout.exercises.length).fill(false);
       
+      console.log('🔍 Dados do workout carregado:', {
+        id: workoutData.id,
+        completed: workoutData.completed,
+        completed_exercises_indices: workoutData.completed_exercises_indices
+      });
+      
       // If workout is completed, mark all as completed
       if (workoutData.completed) {
         initialCompleted.fill(true);
       } else {
         // Load completed exercises from saved indices
         if (workoutData.completed_exercises_indices && workoutData.completed_exercises_indices.length > 0) {
+          console.log('🔍 Marcando exercícios como concluídos:', workoutData.completed_exercises_indices);
           workoutData.completed_exercises_indices.forEach((idx: number) => {
             initialCompleted[idx] = true;
           });
@@ -145,10 +152,16 @@ const WorkoutSession = () => {
       .map((completed, idx) => completed ? idx : -1)
       .filter(idx => idx !== -1);
     
-    await supabase
+    console.log('🔍 Salvando índices concluídos:', completedIndices);
+    console.log('🔍 Workout ID:', workoutId);
+    
+    const { data, error } = await supabase
       .from('workouts')
       .update({ completed_exercises_indices: completedIndices })
-      .eq('id', workoutId);
+      .eq('id', workoutId)
+      .select();
+    
+    console.log('🔍 Resposta do update:', data, error);
 
     // Update replacement as completed if it exists
     const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
