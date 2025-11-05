@@ -41,6 +41,7 @@ const WorkoutSession = () => {
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const navigate = useNavigate();
   const { workoutId } = useParams();
   const { toast } = useToast();
@@ -139,6 +140,9 @@ const WorkoutSession = () => {
     const newCompleted = [...completedExercises];
     newCompleted[currentRealIndex] = true;
 
+    // Start transition animation
+    setTransitioning(true);
+
     // Update workout with completed exercise index
     const completedIndices = newCompleted
       .map((completed, idx) => completed ? idx : -1)
@@ -184,18 +188,27 @@ const WorkoutSession = () => {
           navigate("/dashboard", { replace: true });
         }, 500);
       } else {
-        // Update local state for next exercise
-        setCompletedExercises(newCompleted);
-        const newOrder = exerciseOrder.slice(1);
-        setExerciseOrder(newOrder);
-        
-        toast({
-          title: "Exercício concluído!",
-          description: `Faltam ${newOrder.length} exercícios`,
-        });
+        // Wait for fade-out animation
+        setTimeout(() => {
+          // Update local state for next exercise
+          setCompletedExercises(newCompleted);
+          const newOrder = exerciseOrder.slice(1);
+          setExerciseOrder(newOrder);
+          
+          toast({
+            title: "Exercício concluído!",
+            description: `Faltam ${newOrder.length} exercícios`,
+          });
+
+          // End transition after update
+          setTimeout(() => {
+            setTransitioning(false);
+          }, 50);
+        }, 300);
       }
     } catch (error: any) {
       console.error("Error completing exercise:", error);
+      setTransitioning(false);
       toast({
         title: "Erro ao atualizar treino",
         description: error.message,
@@ -442,7 +455,7 @@ const WorkoutSession = () => {
               <Progress value={progress} className="h-2" />
             </div>
 
-            <Card className="p-8">
+            <Card className={`p-8 transition-all duration-300 ${transitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100 animate-fade-in'}`}>
               <div className="text-center mb-6">
                 <span className="text-sm text-muted-foreground">
                   Faltam {exerciseOrder.length} exercícios
