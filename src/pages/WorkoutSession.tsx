@@ -111,9 +111,13 @@ const WorkoutSession = () => {
       setCompletedExercises(initialCompleted);
       
       // Only set exercise order if not started yet or starting fresh
-      // Remove already completed exercises from the order
+      // Remove already completed and replaced exercises from the order
       const activeExercises = Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i)
-        .filter(i => !initialCompleted[i]);
+        .filter(i => {
+          const isCompleted = initialCompleted[i];
+          const isReplaced = (replacements || []).some((r: ReplacedExercise) => r.original_index === i);
+          return !isCompleted && !isReplaced;
+        });
       
       setExerciseOrder(activeExercises);
     } catch (error: any) {
@@ -129,8 +133,12 @@ const WorkoutSession = () => {
   };
 
   const handleStartWorkout = () => {
-    // Filter to show only exercises that are not completed (status "a fazer")
-    const pendingExercises = exerciseOrder.filter(idx => !completedExercises[idx]);
+    // Filter to show only exercises that are not completed and not replaced (status "livre")
+    const pendingExercises = exerciseOrder.filter(idx => {
+      const isCompleted = completedExercises[idx];
+      const isReplaced = replacedExercises.some(r => r.original_index === idx);
+      return !isCompleted && !isReplaced;
+    });
     setExerciseOrder(pendingExercises);
     setStarted(true);
   };
@@ -314,15 +322,19 @@ const WorkoutSession = () => {
     const currentRealIndex = exerciseOrder[0];
     const newOrder = [...exerciseOrder.slice(1)];
     
-    // Encontra a posição do primeiro exercício concluído
-    const firstCompletedIndex = newOrder.findIndex(idx => completedExercises[idx]);
+    // Encontra a posição do primeiro exercício concluído ou trocado
+    const firstBlockedIndex = newOrder.findIndex(idx => {
+      const isCompleted = completedExercises[idx];
+      const isReplaced = replacedExercises.some(r => r.original_index === idx);
+      return isCompleted || isReplaced;
+    });
     
-    // Se não há exercícios concluídos, adiciona no final
-    // Se há exercícios concluídos, adiciona antes deles
-    if (firstCompletedIndex === -1) {
+    // Se não há exercícios bloqueados (concluídos/trocados), adiciona no final
+    // Se há exercícios bloqueados, adiciona antes deles
+    if (firstBlockedIndex === -1) {
       newOrder.push(currentRealIndex);
     } else {
-      newOrder.splice(firstCompletedIndex, 0, currentRealIndex);
+      newOrder.splice(firstBlockedIndex, 0, currentRealIndex);
     }
     
     setExerciseOrder(newOrder);
@@ -402,9 +414,10 @@ const WorkoutSession = () => {
                 const isCompleted = completedExercises[idx];
                 const isReplaced = replacedExercises.some(r => r.original_index === idx);
                 const isPending = !isCompleted && !isReplaced;
+                const isBlocked = isCompleted || isReplaced;
                 
                 return (
-                  <div key={idx} className="p-4 border border-border rounded-lg">
+                  <div key={idx} className={`p-4 border border-border rounded-lg ${isBlocked ? 'opacity-60' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <p className="font-medium">{exercise.name}</p>
@@ -414,22 +427,18 @@ const WorkoutSession = () => {
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
                         {isCompleted && (
-                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium min-w-[90px]">
-                            <Check className="h-3 w-3 shrink-0" />
-                            <span className="hidden sm:inline">Concluído</span>
-                            <span className="sm:hidden">OK</span>
+                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium min-w-[60px]">
+                            <span>✅</span>
                           </div>
                         )}
                         {isReplaced && !isCompleted && (
                           <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium min-w-[90px]">
-                            <RefreshCw className="h-3 w-3 shrink-0" />
-                            <span className="hidden sm:inline">Trocado</span>
-                            <span className="sm:hidden">Novo</span>
+                            <span>Trocado 💱</span>
                           </div>
                         )}
                         {isPending && (
-                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium min-w-[90px]">
-                            <span>À fazer</span>
+                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium min-w-[60px]">
+                            <span>Livre</span>
                           </div>
                         )}
                       </div>
