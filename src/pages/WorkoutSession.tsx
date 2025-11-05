@@ -157,21 +157,24 @@ const WorkoutSession = () => {
           .eq('id', replacement.id);
       }
 
-      // If all exercises completed, mark workout as completed
+      const now = new Date();
+      const todayDate = now.toISOString().split('T')[0];
+
+      // Always update the database with the latest state
+      const { error } = await supabase
+        .from("workouts")
+        .update({ 
+          completed: allExercisesCompleted,
+          completed_at: allExercisesCompleted ? now.toISOString() : null,
+          completed_date: allExercisesCompleted ? todayDate : null,
+          completed_exercises_indices: completedIndices
+        })
+        .eq("id", workoutId);
+
+      if (error) throw error;
+
+      // If all exercises completed, show success and navigate
       if (allExercisesCompleted) {
-        const now = new Date();
-        const { error } = await supabase
-          .from("workouts")
-          .update({ 
-            completed: true, 
-            completed_at: now.toISOString(),
-            completed_date: now.toISOString().split('T')[0],
-            completed_exercises_indices: completedIndices
-          })
-          .eq("id", workoutId);
-
-        if (error) throw error;
-
         toast({
           title: "Treino concluído! 🎉",
           description: "Parabéns! Você completou o treino de hoje.",
@@ -181,17 +184,18 @@ const WorkoutSession = () => {
           navigate("/dashboard", { replace: true });
         }, 500);
       } else {
-        // Just update the completed indices
-        await supabase
-          .from('workouts')
-          .update({ completed_exercises_indices: completedIndices })
-          .eq('id', workoutId);
-
+        // Update local state for next exercise
         setCompletedExercises(newCompleted);
         const newOrder = exerciseOrder.slice(1);
         setExerciseOrder(newOrder);
+        
+        toast({
+          title: "Exercício concluído!",
+          description: `Faltam ${newOrder.length} exercícios`,
+        });
       }
     } catch (error: any) {
+      console.error("Error completing exercise:", error);
       toast({
         title: "Erro ao atualizar treino",
         description: error.message,
