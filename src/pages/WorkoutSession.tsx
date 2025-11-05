@@ -82,26 +82,48 @@ const WorkoutSession = () => {
       // Initialize completed exercises array
       const initialCompleted = new Array(parsedWorkout.exercises.length).fill(false);
       
+      // Check if all exercises are completed based on completed_exercises_indices
+      const completedIndices = workoutData.completed_exercises_indices || [];
+      const allExercisesCompleted = completedIndices.length === parsedWorkout.exercises.length;
+      
+      // If all exercises completed but workout not marked as completed, update it
+      if (allExercisesCompleted && !workoutData.completed) {
+        const now = new Date();
+        const todayDate = now.toISOString().split('T')[0];
+        await supabase
+          .from("workouts")
+          .update({ 
+            completed: true,
+            completed_at: now.toISOString(),
+            completed_date: todayDate
+          })
+          .eq("id", workoutId);
+        
+        workoutData.completed = true;
+      }
+      
       // If workout is completed, mark all as completed
-      if (workoutData.completed) {
+      if (workoutData.completed || allExercisesCompleted) {
         initialCompleted.fill(true);
       } else {
         // Load completed exercises from saved indices
-        if (workoutData.completed_exercises_indices && workoutData.completed_exercises_indices.length > 0) {
-          workoutData.completed_exercises_indices.forEach((idx: number) => {
+        completedIndices.forEach((idx: number) => {
+          if (idx < initialCompleted.length) {
             initialCompleted[idx] = true;
-          });
-        }
+          }
+        });
         
         // Mark replaced/completed exercises
         if (replacements && replacements.length > 0) {
           replacements.forEach(replacement => {
             // Mark replaced exercises as completed if they were completed
-            if (replacement.completed) {
+            if (replacement.completed && replacement.original_index < initialCompleted.length) {
               initialCompleted[replacement.original_index] = true;
             }
             // Update exercise with replacement
-            parsedWorkout.exercises[replacement.original_index] = replacement.new_exercise as unknown as Exercise;
+            if (replacement.original_index < parsedWorkout.exercises.length) {
+              parsedWorkout.exercises[replacement.original_index] = replacement.new_exercise as unknown as Exercise;
+            }
           });
         }
       }
