@@ -358,6 +358,42 @@ const WorkoutSession = () => {
     });
   };
 
+  const handleFinishWorkout = async () => {
+    try {
+      const allIndices = Array.from({ length: workout!.exercises.length }, (_, i) => i);
+      const now = new Date();
+      const todayDate = now.toISOString().split('T')[0];
+
+      const { error } = await supabase
+        .from("workouts")
+        .update({ 
+          completed: true,
+          completed_at: now.toISOString(),
+          completed_date: todayDate,
+          completed_exercises_indices: allIndices
+        })
+        .eq("id", workoutId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Treino finalizado!",
+        description: "Voltando ao dashboard...",
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 500);
+    } catch (error: any) {
+      console.error("Error finishing workout:", error);
+      toast({
+        title: "Erro ao finalizar treino",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
 
   const progress = workout
     ? (completedIndices.length / workout.exercises.length) * 100
@@ -398,67 +434,72 @@ const WorkoutSession = () => {
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         {!started || workoutCompleted ? (
-          <Card className="p-8 text-center">
-            <h1 className="text-3xl font-bold mb-2">{workout.title}</h1>
-            <p className="text-muted-foreground mb-6">{weekDays[workout.day_of_week]}</p>
+          <Card className="p-6 text-center">
+            <h1 className="text-2xl font-bold mb-2">{workout.title}</h1>
+            <p className="text-muted-foreground mb-4">{weekDays[workout.day_of_week]}</p>
             
             {workoutCompleted && (
-              <div className="mb-6 p-4 bg-primary/10 rounded-lg">
-                <p className="text-primary font-bold text-lg">✅ Treino Concluído!</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Confira abaixo os exercícios realizados
+              <div className="mb-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                <p className="text-primary font-bold text-lg mb-1">✅ Treino Concluído!</p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Parabéns! Você completou todos os exercícios
                 </p>
+                <Button onClick={handleFinishWorkout} size="lg" className="w-full">
+                  Voltar ao Dashboard
+                </Button>
               </div>
             )}
             
-            <div className="space-y-4 mb-8">
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <span className="font-medium">Total de exercícios</span>
-                <span className="text-2xl font-bold text-primary">{workout.exercises.length}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 mb-8 text-left">
-              {workout.exercises.map((exercise, idx) => {
-                const status = getExerciseStatus(idx);
-                const isBlocked = status === 'completed' || status === 'replaced';
-                
-                return (
-                  <div key={idx} className={`p-4 border border-border rounded-lg ${isBlocked ? 'opacity-60' : ''}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-medium">{exercise.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {exercise.sets} séries x {exercise.reps} repetições
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-1 shrink-0">
-                        {status === 'completed' && (
-                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium min-w-[60px]">
-                            <span>✅</span>
-                          </div>
-                        )}
-                        {status === 'replaced' && (
-                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium min-w-[90px]">
-                            <span>Trocado 💱</span>
-                          </div>
-                        )}
-                        {status === 'free' && (
-                          <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium min-w-[60px]">
-                            <span>Livre</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
             {!workoutCompleted && (
-              <Button onClick={handleStartWorkout} size="lg" className="w-full">
-                Começar Treino
-              </Button>
+              <>
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <span className="font-medium text-sm">Total de exercícios</span>
+                    <span className="text-xl font-bold text-primary">{workout.exercises.length}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-6 text-left max-h-[300px] overflow-y-auto">
+                  {workout.exercises.map((exercise, idx) => {
+                    const status = getExerciseStatus(idx);
+                    const isBlocked = status === 'completed' || status === 'replaced';
+                    
+                    return (
+                      <div key={idx} className={`p-3 border border-border rounded-lg ${isBlocked ? 'opacity-60' : ''}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{exercise.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {exercise.sets} séries x {exercise.reps} repetições
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            {status === 'completed' && (
+                              <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium min-w-[60px]">
+                                <span>✅</span>
+                              </div>
+                            )}
+                            {status === 'replaced' && (
+                              <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium min-w-[90px]">
+                                <span>Trocado 💱</span>
+                              </div>
+                            )}
+                            {status === 'free' && (
+                              <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium min-w-[60px]">
+                                <span>Livre</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Button onClick={handleStartWorkout} size="lg" className="w-full">
+                  Começar Treino
+                </Button>
+              </>
             )}
           </Card>
         ) : (
