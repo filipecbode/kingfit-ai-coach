@@ -19,9 +19,11 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [workoutPlan, setWorkoutPlan] = useState<any>(null);
   const [workouts, setWorkouts] = useState<any[]>([]);
+  const [todayWorkout, setTodayWorkout] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showGoalDialog, setShowGoalDialog] = useState(false);
+  const [showAllWorkouts, setShowAllWorkouts] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -85,13 +87,13 @@ const Dashboard = () => {
         // Resetar status de concluído se passou 24h
         if (workoutsData) {
           const now = new Date();
-          now.setHours(0, 0, 0, 0); // Normalize to start of today
+          now.setHours(0, 0, 0, 0);
           
           const updatedWorkouts = await Promise.all(
             workoutsData.map(async (workout) => {
               if (workout.completed && workout.completed_date) {
                 const completedDate = new Date(workout.completed_date);
-                completedDate.setHours(0, 0, 0, 0); // Normalize to start of completed day
+                completedDate.setHours(0, 0, 0, 0);
                 
                 const daysDiff = Math.floor((now.getTime() - completedDate.getTime()) / (1000 * 60 * 60 * 24));
                 
@@ -118,6 +120,12 @@ const Dashboard = () => {
             })
           );
           setWorkouts(updatedWorkouts);
+          
+          // Encontrar treino de hoje
+          const today = new Date().getDay();
+          const todayDayOfWeek = today === 0 ? 7 : today;
+          const todayWorkoutData = updatedWorkouts.find(w => w.day_of_week === todayDayOfWeek);
+          setTodayWorkout(todayWorkoutData || null);
         }
       }
     } catch (error: any) {
@@ -288,57 +296,106 @@ const Dashboard = () => {
               </div>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {workouts.map((workout) => {
-                const today = new Date().getDay();
-                const isToday = workout.day_of_week === (today === 0 ? 7 : today);
-                return (
-                  <Card 
-                    key={workout.id} 
-                    className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
-                      isToday ? 'ring-2 ring-primary' : ''
-                    }`}
-                    onClick={() => navigate(`/workout/${workout.id}`)}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
+            {/* Treino de Hoje */}
+            {todayWorkout ? (
+              <Card className="p-8 bg-gradient-to-br from-primary/10 via-background to-background border-2 border-primary">
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium text-primary">TREINO DE HOJE</span>
+                  </div>
+                  <h2 className="text-3xl font-bold mb-1">{todayWorkout.title}</h2>
+                  <p className="text-lg text-muted-foreground">{weekDays[todayWorkout.day_of_week]}</p>
+                </div>
+
+                {todayWorkout.completed && (
+                  <div className="mb-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                    <p className="text-primary font-bold text-lg">✅ Treino Concluído Hoje!</p>
+                  </div>
+                )}
+
+                <div className="space-y-3 mb-6">
+                  {todayWorkout.exercises.map((exercise: any, idx: number) => (
+                    <div key={idx} className="p-4 bg-background border border-border rounded-lg">
+                      <p className="font-semibold mb-1">{exercise.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {exercise.sets} séries x {exercise.reps} repetições
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => navigate(`/workout/${todayWorkout.id}`)}
+                >
+                  {todayWorkout.completed ? 'Ver Detalhes' : 'Iniciar Treino'}
+                </Button>
+              </Card>
+            ) : (
+              <Card className="p-8 text-center">
+                <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-bold mb-2">Sem treino hoje</h3>
+                <p className="text-muted-foreground">
+                  Hoje é dia de descanso! Veja outros treinos abaixo.
+                </p>
+              </Card>
+            )}
+
+            {/* Botão para ver todos os treinos */}
+            <div className="text-center">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAllWorkouts(!showAllWorkouts)}
+                className="w-full md:w-auto"
+              >
+                {showAllWorkouts ? 'Ocultar Outros Treinos' : 'Ver Todos os Treinos da Semana'}
+              </Button>
+            </div>
+
+            {/* Outros treinos */}
+            {showAllWorkouts && (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {workouts
+                  .filter(w => w.id !== todayWorkout?.id)
+                  .map((workout) => (
+                    <Card 
+                      key={workout.id} 
+                      className="p-6 cursor-pointer transition-all hover:shadow-lg"
+                      onClick={() => navigate(`/workout/${workout.id}`)}
+                    >
+                      <div className="flex items-center justify-between mb-4">
                         <h3 className="font-bold text-lg">{weekDays[workout.day_of_week]}</h3>
-                        {isToday && (
-                          <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
-                            Hoje
+                        {workout.completed && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                            Concluído
                           </span>
                         )}
                       </div>
-                      {workout.completed && (
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
-                          <span className="hidden sm:inline">Concluído</span>
-                          <span className="sm:hidden">✓</span>
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="font-semibold mb-3">{workout.title}</h4>
-                    <div className="space-y-2 mb-4">
-                      {workout.exercises.slice(0, 3).map((exercise: any, idx: number) => (
-                        <div key={idx} className="text-sm">
-                          <p className="font-medium">{exercise.name}</p>
-                          <p className="text-muted-foreground text-xs">
-                            {exercise.sets} séries x {exercise.reps} repetições
+                      <h4 className="font-semibold mb-3">{workout.title}</h4>
+                      <div className="space-y-2 mb-4">
+                        {workout.exercises.slice(0, 3).map((exercise: any, idx: number) => (
+                          <div key={idx} className="text-sm">
+                            <p className="font-medium">{exercise.name}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {exercise.sets} séries x {exercise.reps} repetições
+                            </p>
+                          </div>
+                        ))}
+                        {workout.exercises.length > 3 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{workout.exercises.length - 3} exercícios
                           </p>
-                        </div>
-                      ))}
-                      {workout.exercises.length > 3 && (
-                        <p className="text-xs text-muted-foreground">
-                          +{workout.exercises.length - 3} exercícios
-                        </p>
-                      )}
-                    </div>
-                    <Button className="w-full" size="sm">
-                      {workout.completed ? 'Ver Treino' : 'Iniciar Treino'}
-                    </Button>
-                  </Card>
-                );
-              })}
-            </div>
+                        )}
+                      </div>
+                      <Button className="w-full" size="sm">
+                        {workout.completed ? 'Ver Treino' : 'Iniciar Treino'}
+                      </Button>
+                    </Card>
+                  ))}
+              </div>
+            )}
           </div>
         )}
       </main>

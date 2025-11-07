@@ -84,18 +84,11 @@ const WorkoutSession = () => {
 
       if (error) throw error;
 
-      console.log("=== LOAD WORKOUT DEBUG ===");
-      console.log("Workout data from DB:", workoutData);
-      console.log("Completed:", workoutData.completed);
-      console.log("Completed indices from DB:", workoutData.completed_exercises_indices);
-
       // Load replaced exercises
       const { data: replacements } = await supabase
         .from("exercise_replacements")
         .select("*")
         .eq("workout_id", workoutId);
-
-      console.log("Replacements from DB:", replacements);
 
       const parsedWorkout = {
         ...workoutData,
@@ -115,11 +108,6 @@ const WorkoutSession = () => {
       const completedIndicesFromDB = workoutData.completed_exercises_indices || [];
       const workoutCompletedFromDB = workoutData.completed || false;
       
-      console.log("Setting states:");
-      console.log("- workoutCompleted:", workoutCompletedFromDB);
-      console.log("- completedIndices:", completedIndicesFromDB);
-      console.log("- replacements:", replacements || []);
-      
       setWorkout(parsedWorkout);
       setWorkoutCompleted(workoutCompletedFromDB);
       setCompletedIndices(completedIndicesFromDB);
@@ -130,11 +118,9 @@ const WorkoutSession = () => {
         .filter(i => {
           const isCompleted = workoutCompletedFromDB || completedIndicesFromDB.includes(i);
           const isReplaced = (replacements || []).some((r: ReplacedExercise) => r.original_index === i);
-          console.log(`Exercise ${i}: completed=${isCompleted}, replaced=${isReplaced}`);
           return !isCompleted && !isReplaced;
         });
       
-      console.log("Free exercises (exerciseOrder):", freeExercises);
       setExerciseOrder(freeExercises);
     } catch (error: any) {
       toast({
@@ -153,93 +139,68 @@ const WorkoutSession = () => {
   };
 
   const handleCompleteExercise = async () => {
-    if (!workout || exerciseOrder.length === 0) {
-      console.error("No workout or exercise order");
-      return;
-    }
+    if (!workout || exerciseOrder.length === 0) return;
 
     const currentRealIndex = exerciseOrder[0];
-    console.log("Completing exercise at index:", currentRealIndex);
-    console.log("Current completed indices:", completedIndices);
-
-    // Start transition animation
     setTransitioning(true);
 
-    // Adicionar índice atual aos concluídos
-    const newCompletedIndices = [...completedIndices, currentRealIndex];
-    console.log("New completed indices:", newCompletedIndices);
-    
-    // Verificar se todos os exercícios foram concluídos
-    const allExercisesCompleted = newCompletedIndices.length === workout.exercises.length;
-    console.log("All exercises completed?", allExercisesCompleted);
-    
     try {
-      // Se existe replacement para este exercício, marcar como completo
+      // Marcar replacement como completo se existir
       const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
       if (replacement) {
-        console.log("Updating replacement as completed");
         await supabase
           .from('exercise_replacements')
           .update({ completed: true })
           .eq('id', replacement.id);
       }
 
+      // Calcular novos índices completados
+      const newCompletedIndices = [...completedIndices, currentRealIndex].sort((a, b) => a - b);
+      const allExercisesCompleted = newCompletedIndices.length === workout.exercises.length;
+
+      // Preparar atualização
       const now = new Date();
       const todayDate = now.toISOString().split('T')[0];
 
-      console.log("Updating workout with:", {
-        completed: allExercisesCompleted,
-        completed_at: allExercisesCompleted ? now.toISOString() : null,
-        completed_date: allExercisesCompleted ? todayDate : null,
-        completed_exercises_indices: newCompletedIndices,
-        workoutId
-      });
+      const updateData: any = {
+        completed_exercises_indices: newCompletedIndices
+      };
 
-      // Atualizar o banco de dados
-      const { data, error } = await supabase
-        .from("workouts")
-        .update({ 
-          completed: allExercisesCompleted,
-          completed_at: allExercisesCompleted ? now.toISOString() : null,
-          completed_date: allExercisesCompleted ? todayDate : null,
-          completed_exercises_indices: newCompletedIndices
-        })
-        .eq("id", workoutId)
-        .select();
-
-      console.log("Update result:", { data, error });
-
-      if (error) {
-        console.error("Database update error:", error);
-        throw error;
+      if (allExercisesCompleted) {
+        updateData.completed = true;
+        updateData.completed_at = now.toISOString();
+        updateData.completed_date = todayDate;
       }
 
-      // Se todos os exercícios foram concluídos
+      // Atualizar banco de dados
+      const { error } = await supabase
+        .from("workouts")
+        .update(updateData)
+        .eq("id", workoutId);
+
+      if (error) throw error;
+
+      // Atualizar estados locais
       if (allExercisesCompleted) {
         setWorkoutCompleted(true);
         setCompletedIndices(newCompletedIndices);
+        setTransitioning(false);
         
         toast({
           title: "Treino concluído! 🎉",
           description: "Parabéns! Você completou o treino de hoje.",
         });
       } else {
-        // Aguardar animação de fade-out
         setTimeout(() => {
-          // Atualizar estados locais
           setCompletedIndices(newCompletedIndices);
-          const newOrder = exerciseOrder.slice(1);
-          setExerciseOrder(newOrder);
+          setExerciseOrder(exerciseOrder.slice(1));
           
           toast({
             title: "Exercício concluído!",
-            description: `Faltam ${newOrder.length} exercícios`,
+            description: `Faltam ${exerciseOrder.length - 1} exercícios`,
           });
 
-          // Finalizar transição
-          setTimeout(() => {
-            setTransitioning(false);
-          }, 50);
+          setTimeout(() => setTransitioning(false), 50);
         }, 300);
       }
     } catch (error: any) {
