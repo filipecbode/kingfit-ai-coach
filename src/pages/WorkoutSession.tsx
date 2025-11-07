@@ -35,7 +35,8 @@ interface ReplacedExercise {
 const WorkoutSession = () => {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exerciseOrder, setExerciseOrder] = useState<number[]>([]);
-  const [completedExercises, setCompletedExercises] = useState<boolean[]>([]);
+  const [workoutCompleted, setWorkoutCompleted] = useState(false);
+  const [completedIndices, setCompletedIndices] = useState<number[]>([]);
   const [replacedExercises, setReplacedExercises] = useState<ReplacedExercise[]>([]);
   const [replacing, setReplacing] = useState(false);
   const [started, setStarted] = useState(false);
@@ -47,6 +48,21 @@ const WorkoutSession = () => {
   const { toast } = useToast();
 
   const weekDays = ["", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+
+  // Função para determinar o status de um exercício
+  const getExerciseStatus = (index: number): 'completed' | 'replaced' | 'free' => {
+    // Se o treino completo está concluído, todos são concluídos
+    if (workoutCompleted) return 'completed';
+    
+    // Se o índice está na lista de concluídos, é concluído
+    if (completedIndices.includes(index)) return 'completed';
+    
+    // Se existe replacement para este índice, é trocado
+    if (replacedExercises.some(r => r.original_index === index)) return 'replaced';
+    
+    // Caso contrário, é livre
+    return 'free';
+  };
 
   useEffect(() => {
     loadWorkout();
@@ -79,69 +95,31 @@ const WorkoutSession = () => {
         exercises: [...(workoutData.exercises as unknown as Exercise[])]
       };
 
-      // Initialize completed exercises array
-      const initialCompleted = new Array(parsedWorkout.exercises.length).fill(false);
-      
-      // Check if all exercises are completed based on completed_exercises_indices
-      const completedIndices = workoutData.completed_exercises_indices || [];
-      const allExercisesCompleted = completedIndices.length === parsedWorkout.exercises.length;
-      
-      // If all exercises completed but workout not marked as completed, update it
-      if (allExercisesCompleted && !workoutData.completed) {
-        const now = new Date();
-        const todayDate = now.toISOString().split('T')[0];
-        await supabase
-          .from("workouts")
-          .update({ 
-            completed: true,
-            completed_at: now.toISOString(),
-            completed_date: todayDate
-          })
-          .eq("id", workoutId);
-        
-        workoutData.completed = true;
-      }
-      
-      // If workout is completed, mark all as completed
-      if (workoutData.completed || allExercisesCompleted) {
-        initialCompleted.fill(true);
-      } else {
-        // Load completed exercises from saved indices
-        completedIndices.forEach((idx: number) => {
-          if (idx < initialCompleted.length) {
-            initialCompleted[idx] = true;
+      // Aplicar substituições aos exercícios
+      if (replacements && replacements.length > 0) {
+        replacements.forEach(replacement => {
+          if (replacement.original_index < parsedWorkout.exercises.length) {
+            parsedWorkout.exercises[replacement.original_index] = replacement.new_exercise as unknown as Exercise;
           }
         });
-        
-        // Mark replaced/completed exercises
-        if (replacements && replacements.length > 0) {
-          replacements.forEach(replacement => {
-            // Mark replaced exercises as completed if they were completed
-            if (replacement.completed && replacement.original_index < initialCompleted.length) {
-              initialCompleted[replacement.original_index] = true;
-            }
-            // Update exercise with replacement
-            if (replacement.original_index < parsedWorkout.exercises.length) {
-              parsedWorkout.exercises[replacement.original_index] = replacement.new_exercise as unknown as Exercise;
-            }
-          });
-        }
       }
 
+      // Definir estados baseados apenas nos dados do banco
       setWorkout(parsedWorkout);
+      setWorkoutCompleted(workoutData.completed || false);
+      setCompletedIndices(workoutData.completed_exercises_indices || []);
       setReplacedExercises(replacements || []);
-      setCompletedExercises(initialCompleted);
       
-      // Only set exercise order if not started yet or starting fresh
-      // Remove already completed and replaced exercises from the order
-      const activeExercises = Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i)
+      // Criar ordem de exercícios apenas com os livres
+      const freeExercises = Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i)
         .filter(i => {
-          const isCompleted = initialCompleted[i];
+          const indices = workoutData.completed_exercises_indices || [];
+          const isCompleted = workoutData.completed || indices.includes(i);
           const isReplaced = (replacements || []).some((r: ReplacedExercise) => r.original_index === i);
           return !isCompleted && !isReplaced;
         });
       
-      setExerciseOrder(activeExercises);
+      setExerciseOrder(freeExercises);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar treino",
@@ -155,34 +133,23 @@ const WorkoutSession = () => {
   };
 
   const handleStartWorkout = () => {
-    // Filter to show only exercises that are not completed and not replaced (status "livre")
-    const pendingExercises = exerciseOrder.filter(idx => {
-      const isCompleted = completedExercises[idx];
-      const isReplaced = replacedExercises.some(r => r.original_index === idx);
-      return !isCompleted && !isReplaced;
-    });
-    setExerciseOrder(pendingExercises);
     setStarted(true);
   };
 
   const handleCompleteExercise = async () => {
     const currentRealIndex = exerciseOrder[0];
-    const newCompleted = [...completedExercises];
-    newCompleted[currentRealIndex] = true;
 
     // Start transition animation
     setTransitioning(true);
 
-    // Update workout with completed exercise index
-    const completedIndices = newCompleted
-      .map((completed, idx) => completed ? idx : -1)
-      .filter(idx => idx !== -1);
+    // Adicionar índice atual aos concluídos
+    const newCompletedIndices = [...completedIndices, currentRealIndex];
     
-    // Check if this was the last exercise
-    const allExercisesCompleted = completedIndices.length === workout!.exercises.length;
+    // Verificar se todos os exercícios foram concluídos
+    const allExercisesCompleted = newCompletedIndices.length === workout!.exercises.length;
     
     try {
-      // Update replacement as completed if it exists
+      // Se existe replacement para este exercício, marcar como completo
       const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
       if (replacement) {
         await supabase
@@ -194,21 +161,24 @@ const WorkoutSession = () => {
       const now = new Date();
       const todayDate = now.toISOString().split('T')[0];
 
-      // Always update the database with the latest state
+      // Atualizar o banco de dados
       const { error } = await supabase
         .from("workouts")
         .update({ 
           completed: allExercisesCompleted,
           completed_at: allExercisesCompleted ? now.toISOString() : null,
           completed_date: allExercisesCompleted ? todayDate : null,
-          completed_exercises_indices: completedIndices
+          completed_exercises_indices: newCompletedIndices
         })
         .eq("id", workoutId);
 
       if (error) throw error;
 
-      // If all exercises completed, show success and navigate
+      // Se todos os exercícios foram concluídos
       if (allExercisesCompleted) {
+        setWorkoutCompleted(true);
+        setCompletedIndices(newCompletedIndices);
+        
         toast({
           title: "Treino concluído! 🎉",
           description: "Parabéns! Você completou o treino de hoje.",
@@ -218,10 +188,10 @@ const WorkoutSession = () => {
           navigate("/dashboard", { replace: true });
         }, 500);
       } else {
-        // Wait for fade-out animation
+        // Aguardar animação de fade-out
         setTimeout(() => {
-          // Update local state for next exercise
-          setCompletedExercises(newCompleted);
+          // Atualizar estados locais
+          setCompletedIndices(newCompletedIndices);
           const newOrder = exerciseOrder.slice(1);
           setExerciseOrder(newOrder);
           
@@ -230,7 +200,7 @@ const WorkoutSession = () => {
             description: `Faltam ${newOrder.length} exercícios`,
           });
 
-          // End transition after update
+          // Finalizar transição
           setTimeout(() => {
             setTransitioning(false);
           }, 50);
@@ -342,39 +312,23 @@ const WorkoutSession = () => {
 
   const handleSkipExercise = () => {
     const currentRealIndex = exerciseOrder[0];
-    const newOrder = [...exerciseOrder.slice(1)];
-    
-    // Encontra a posição do primeiro exercício concluído ou trocado
-    const firstBlockedIndex = newOrder.findIndex(idx => {
-      const isCompleted = completedExercises[idx];
-      const isReplaced = replacedExercises.some(r => r.original_index === idx);
-      return isCompleted || isReplaced;
-    });
-    
-    // Se não há exercícios bloqueados (concluídos/trocados), adiciona no final
-    // Se há exercícios bloqueados, adiciona antes deles
-    if (firstBlockedIndex === -1) {
-      newOrder.push(currentRealIndex);
-    } else {
-      newOrder.splice(firstBlockedIndex, 0, currentRealIndex);
-    }
+    const newOrder = [...exerciseOrder.slice(1), currentRealIndex];
     
     setExerciseOrder(newOrder);
     
     toast({
       title: "Exercício pulado",
-      description: "O exercício foi movido para fazer daqui a pouco.",
+      description: "O exercício foi movido para o final da fila.",
     });
   };
 
 
   const progress = workout
-    ? (completedExercises.filter(Boolean).length / workout.exercises.length) * 100
+    ? (completedIndices.length / workout.exercises.length) * 100
     : 0;
 
   const currentExerciseRealIndex = exerciseOrder[0];
   const currentExercise = workout?.exercises[currentExerciseRealIndex];
-  const isExerciseReplaced = replacedExercises.some(r => r.original_index === currentExerciseRealIndex);
 
   if (loading) {
     return (
@@ -388,9 +342,6 @@ const WorkoutSession = () => {
   }
 
   if (!workout) return null;
-
-  // Se o treino está completo e não há exercícios pendentes, mostrar apenas a visualização
-  const workoutCompleted = workout.completed || (exerciseOrder.length === 0 && completedExercises.every(Boolean));
   
   if (!currentExercise && !workoutCompleted) return null;
 
@@ -433,10 +384,8 @@ const WorkoutSession = () => {
 
             <div className="space-y-3 mb-8 text-left">
               {workout.exercises.map((exercise, idx) => {
-                const isCompleted = completedExercises[idx];
-                const isReplaced = replacedExercises.some(r => r.original_index === idx);
-                const isPending = !isCompleted && !isReplaced;
-                const isBlocked = isCompleted || isReplaced;
+                const status = getExerciseStatus(idx);
+                const isBlocked = status === 'completed' || status === 'replaced';
                 
                 return (
                   <div key={idx} className={`p-4 border border-border rounded-lg ${isBlocked ? 'opacity-60' : ''}`}>
@@ -448,17 +397,17 @@ const WorkoutSession = () => {
                         </p>
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
-                        {isCompleted && (
+                        {status === 'completed' && (
                           <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium min-w-[60px]">
                             <span>✅</span>
                           </div>
                         )}
-                        {isReplaced && !isCompleted && (
+                        {status === 'replaced' && (
                           <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium min-w-[90px]">
                             <span>Trocado 💱</span>
                           </div>
                         )}
-                        {isPending && (
+                        {status === 'free' && (
                           <div className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium min-w-[60px]">
                             <span>Livre</span>
                           </div>
@@ -477,11 +426,11 @@ const WorkoutSession = () => {
             )}
           </Card>
         ) : (
-          <div className="space-y-6">
+            <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Progresso do treino</span>
-                <span>{completedExercises.filter(Boolean).length} de {workout.exercises.length}</span>
+                <span>{completedIndices.length} de {workout.exercises.length}</span>
               </div>
               <Progress value={progress} className="h-2" />
             </div>
@@ -492,20 +441,6 @@ const WorkoutSession = () => {
                   Faltam {exerciseOrder.length} exercícios
                 </span>
                 <h2 className="text-3xl font-bold mt-2">{currentExercise.name}</h2>
-                <div className="mt-2 flex items-center justify-center gap-2">
-                  {completedExercises[currentExerciseRealIndex] && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                      <Check className="h-4 w-4" />
-                      Concluído
-                    </div>
-                  )}
-                  {isExerciseReplaced && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full text-sm font-medium">
-                      <RefreshCw className="h-4 w-4" />
-                      Trocado
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="aspect-video bg-muted rounded-lg mb-6 flex items-center justify-center">
@@ -540,14 +475,8 @@ const WorkoutSession = () => {
                   onClick={handleCompleteExercise}
                   size="lg"
                   className="w-full"
-                  disabled={completedExercises[currentExerciseRealIndex]}
                 >
-                  {completedExercises[currentExerciseRealIndex] ? (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Concluído
-                    </>
-                  ) : exerciseOrder.length === 1 ? (
+                  {exerciseOrder.length === 1 ? (
                     <>
                       <Check className="h-4 w-4 mr-2" />
                       Finalizar Treino
@@ -560,7 +489,7 @@ const WorkoutSession = () => {
                   )}
                 </Button>
                 
-                {!completedExercises[currentExerciseRealIndex] && exerciseOrder.length > 1 && (
+                {exerciseOrder.length > 1 && (
                   <>
                     <Button
                       onClick={handleSkipExercise}
