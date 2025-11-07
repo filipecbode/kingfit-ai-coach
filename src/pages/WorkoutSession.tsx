@@ -137,21 +137,31 @@ const WorkoutSession = () => {
   };
 
   const handleCompleteExercise = async () => {
+    if (!workout || exerciseOrder.length === 0) {
+      console.error("No workout or exercise order");
+      return;
+    }
+
     const currentRealIndex = exerciseOrder[0];
+    console.log("Completing exercise at index:", currentRealIndex);
+    console.log("Current completed indices:", completedIndices);
 
     // Start transition animation
     setTransitioning(true);
 
     // Adicionar índice atual aos concluídos
     const newCompletedIndices = [...completedIndices, currentRealIndex];
+    console.log("New completed indices:", newCompletedIndices);
     
     // Verificar se todos os exercícios foram concluídos
-    const allExercisesCompleted = newCompletedIndices.length === workout!.exercises.length;
+    const allExercisesCompleted = newCompletedIndices.length === workout.exercises.length;
+    console.log("All exercises completed?", allExercisesCompleted);
     
     try {
       // Se existe replacement para este exercício, marcar como completo
       const replacement = replacedExercises.find(r => r.original_index === currentRealIndex);
       if (replacement) {
+        console.log("Updating replacement as completed");
         await supabase
           .from('exercise_replacements')
           .update({ completed: true })
@@ -161,8 +171,16 @@ const WorkoutSession = () => {
       const now = new Date();
       const todayDate = now.toISOString().split('T')[0];
 
+      console.log("Updating workout with:", {
+        completed: allExercisesCompleted,
+        completed_at: allExercisesCompleted ? now.toISOString() : null,
+        completed_date: allExercisesCompleted ? todayDate : null,
+        completed_exercises_indices: newCompletedIndices,
+        workoutId
+      });
+
       // Atualizar o banco de dados
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("workouts")
         .update({ 
           completed: allExercisesCompleted,
@@ -170,9 +188,15 @@ const WorkoutSession = () => {
           completed_date: allExercisesCompleted ? todayDate : null,
           completed_exercises_indices: newCompletedIndices
         })
-        .eq("id", workoutId);
+        .eq("id", workoutId)
+        .select();
 
-      if (error) throw error;
+      console.log("Update result:", { data, error });
+
+      if (error) {
+        console.error("Database update error:", error);
+        throw error;
+      }
 
       // Se todos os exercícios foram concluídos
       if (allExercisesCompleted) {
