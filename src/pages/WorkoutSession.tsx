@@ -84,11 +84,18 @@ const WorkoutSession = () => {
 
       if (error) throw error;
 
+      console.log("=== LOAD WORKOUT DEBUG ===");
+      console.log("Workout data from DB:", workoutData);
+      console.log("Completed:", workoutData.completed);
+      console.log("Completed indices from DB:", workoutData.completed_exercises_indices);
+
       // Load replaced exercises
       const { data: replacements } = await supabase
         .from("exercise_replacements")
         .select("*")
         .eq("workout_id", workoutId);
+
+      console.log("Replacements from DB:", replacements);
 
       const parsedWorkout = {
         ...workoutData,
@@ -105,20 +112,29 @@ const WorkoutSession = () => {
       }
 
       // Definir estados baseados apenas nos dados do banco
+      const completedIndicesFromDB = workoutData.completed_exercises_indices || [];
+      const workoutCompletedFromDB = workoutData.completed || false;
+      
+      console.log("Setting states:");
+      console.log("- workoutCompleted:", workoutCompletedFromDB);
+      console.log("- completedIndices:", completedIndicesFromDB);
+      console.log("- replacements:", replacements || []);
+      
       setWorkout(parsedWorkout);
-      setWorkoutCompleted(workoutData.completed || false);
-      setCompletedIndices(workoutData.completed_exercises_indices || []);
+      setWorkoutCompleted(workoutCompletedFromDB);
+      setCompletedIndices(completedIndicesFromDB);
       setReplacedExercises(replacements || []);
       
       // Criar ordem de exercícios apenas com os livres
       const freeExercises = Array.from({ length: parsedWorkout.exercises.length }, (_, i) => i)
         .filter(i => {
-          const indices = workoutData.completed_exercises_indices || [];
-          const isCompleted = workoutData.completed || indices.includes(i);
+          const isCompleted = workoutCompletedFromDB || completedIndicesFromDB.includes(i);
           const isReplaced = (replacements || []).some((r: ReplacedExercise) => r.original_index === i);
+          console.log(`Exercise ${i}: completed=${isCompleted}, replaced=${isReplaced}`);
           return !isCompleted && !isReplaced;
         });
       
+      console.log("Free exercises (exerciseOrder):", freeExercises);
       setExerciseOrder(freeExercises);
     } catch (error: any) {
       toast({
