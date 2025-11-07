@@ -223,10 +223,6 @@ const WorkoutSession = () => {
           title: "Treino concluído! 🎉",
           description: "Parabéns! Você completou o treino de hoje.",
         });
-
-        setTimeout(() => {
-          navigate("/dashboard", { replace: true });
-        }, 500);
       } else {
         // Aguardar animação de fade-out
         setTimeout(() => {
