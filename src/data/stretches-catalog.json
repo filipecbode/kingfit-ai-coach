@@ -1,0 +1,65 @@
+{
+  "stretches": [
+    {"id": "st-perna-quadril-mobilizacao", "name": "Mobilização de Quadril", "body_part": "perna"},
+    {"id": "st-perna-isquiossentuais", "name": "Alongamento de Posterior de Coxa", "body_part": "perna"},
+    {"id": "st-perna-quadriceps-pe", "name": "Alongamento de Quadríceps em Pé", "body_part": "perna"},
+    {"id": "st-perna-panturrilha-parede", "name": "Panturrilha na Parede", "body_part": "perna"},
+    {"id": "st-perna-butterfly", "name": "Alongamento Borboleta (Adução)", "body_part": "perna"},
+    {"id": "st-perna-joelho-peito", "name": "Joelho ao Peito", "body_part": "perna"},
+    {"id": "st-perna-gluteo", "name": "Alongamento de Glúteo", "body_part": "perna"},
+    {"id": "st-perna-psoas", "name": "Alongamento de Psoas", "body_part": "perna"},
+    {"id": "st-perna-adutores", "name": "Alongamento de Adutores", "body_part": "perna"},
+    {"id": "st-perna-cadeira-fig4", "name": "Figura 4 (Glúteo/Piriforme)", "body_part": "perna"},
+
+    {"id": "st-costas-gato-vaca", "name": "Gato-vaca", "body_part": "costas"},
+    {"id": "st-costas-crianca", "name": "Postura da Criança", "body_part": "costas"},
+    {"id": "st-costas-lat-barra", "name": "Alongamento de Latíssimo", "body_part": "costas"},
+    {"id": "st-costas-rotacao-toracica", "name": "Rotação Torácica", "body_part": "costas"},
+    {"id": "st-costas-flexao-coluna", "name": "Flexão de Coluna", "body_part": "costas"},
+    {"id": "st-costas-extensao-coluna", "name": "Extensão de Coluna", "body_part": "costas"},
+    {"id": "st-costas-giro-coluna", "name": "Giro Lombar", "body_part": "costas"},
+
+    {"id": "st-biceps-parede", "name": "Alongamento de Bíceps na Parede", "body_part": "bíceps"},
+    {"id": "st-biceps-extensao-punho", "name": "Extensão de Punho", "body_part": "bíceps"},
+    {"id": "st-biceps-supinacao", "name": "Supinação Suave", "body_part": "bíceps"},
+
+    {"id": "st-abdomen-cobra", "name": "Alongamento Cobra", "body_part": "abdômen"},
+    {"id": "st-abdomen-diaphragmatico", "name": "Respiração Diafragmática", "body_part": "abdômen"},
+    {"id": "st-abdomen-rotacao", "name": "Rotação de Tronco", "body_part": "abdômen"},
+
+    {"id": "st-peito-parede", "name": "Alongamento de Peitoral na Parede", "body_part": "peito"},
+    {"id": "st-peito-porta", "name": "Peitoral na Porta 90°", "body_part": "peito"},
+    {"id": "st-peito-crucifixo", "name": "Abertura de Peito (Crucifixo Passivo)", "body_part": "peito"},
+
+    {"id": "st-ombro-vassoura", "name": "Mobilidade de Ombro com Vassoura", "body_part": "ombro"},
+    {"id": "st-ombro-trapezio", "name": "Alongamento de Trapézio", "body_part": "ombro"},
+    {"id": "st-ombro-deltoide-anterior", "name": "Alongamento de Deltoide Anterior", "body_part": "ombro"},
+    {"id": "st-ombro-deltoide-posterior", "name": "Alongamento de Deltoide Posterior", "body_part": "ombro"},
+
+    {"id": "st-triceps-cabeca", "name": "Alongamento de Tríceps Acima da Cabeça", "body_part": "tríceps"},
+    {"id": "st-triceps-toalha", "name": "Alongamento com Toalha", "body_part": "tríceps"},
+    {"id": "st-triceps-braço-cruzado", "name": "Braço Cruzado", "body_part": "tríceps"},
+
+    {"id": "st-pescoço-lateral", "name": "Alongamento Lateral de Pescoço", "body_part": "pescoço"},
+    {"id": "st-pescoço-flexao", "name": "Flexão de Pescoço", "body_part": "pescoço"},
+    {"id": "st-pescoço-rotacao", "name": "Rotação de Pescoço", "body_part": "pescoço"},
+
+    {"id": "st-bracos-extensao", "name": "Extensão de Braços", "body_part": "braços"},
+    {"id": "st-bracos-circulos", "name": "Rotação de Ombros (Circulos)", "body_part": "braços"},
+
+    {"id": "st-lombar-flexao-sentado", "name": "Flexão Lombar Sentado", "body_part": "lombar"},
+    {"id": "st-lombar-inclinacao-parede", "name": "Inclinação Lombar", "body_part": "lombar"},
+
+    {"id": "st-tornozelo-mobilizacao", "name": "Mobilidade de Tornozelo", "body_part": "tornozelo"},
+    {"id": "st-tornozelo-rotacao", "name": "Rotação de Tornozelo", "body_part": "tornozelo"},
+
+    {"id": "st-panturrilha-degrau", "name": "Panturrilha no Degrau", "body_part": "panturrilha"},
+    {"id": "st-panturrilha-sentado", "name": "Panturrilha Sentado", "body_part": "panturrilha"},
+
+    {"id": "st-gluteo-sentado", "name": "Glúteo Sentado", "body_part": "glúteo"},
+    {"id": "st-gluteo-deitado", "name": "Glúteo Deitado", "body_part": "glúteo"},
+
+    {"id": "st-quadril-pigeon", "name": "Postura Pigeon", "body_part": "quadril"},
+    {"id": "st-quadril-abertura", "name": "Abertura de Quadril", "body_part": "quadril"}
+  ]
+}

@@ -7,46 +7,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import exerciseCatalog from "@/data/exercise-catalog.json";
+import stretchesCatalog from "@/data/stretches-catalog.json";
 
 const ExerciseCatalog = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todos");
 
-  // Separar exercícios e alongamentos
-  const allExercises = exerciseCatalog.exercises || [];
-  const exercises = allExercises.filter((ex: any) => {
+  // Exercícios do catálogo grande (sem alongamentos)
+  const allExercises = (exerciseCatalog.exercises || []).filter((ex: any) => {
     const id = ex.id || "";
     return !id.includes("st-");
   });
-  const stretches = allExercises.filter((ex: any) => {
-    const id = ex.id || "";
-    return id.includes("st-");
-  });
+  
+  // Alongamentos do catálogo específico
+  const allStretches = stretchesCatalog.stretches || [];
 
   const categories = ["todos", "perna", "costas", "bíceps", "abdômen", "peito", "ombro", "tríceps"];
 
   const filterExercises = (items: any[]) => {
     return items.filter((item: any) => {
       // Busca
-      const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description_short?.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || 
+        item.name?.toLowerCase().includes(searchLower) ||
+        item.description_short?.toLowerCase().includes(searchLower);
       
       // Filtro de categoria - normalizar comparações
-      const itemCategory = (item.category || "").toLowerCase();
-      const itemBodyPart = (item.body_part || "").toLowerCase();
-      const selectedCat = selectedCategory.toLowerCase();
+      if (selectedCategory === "todos") {
+        return matchesSearch;
+      }
       
-      const matchesCategory = selectedCat === "todos" || 
-        itemCategory === selectedCat || 
-        itemBodyPart === selectedCat;
+      const itemCategory = (item.category || "").toLowerCase().trim();
+      const itemBodyPart = (item.body_part || "").toLowerCase().trim();
+      const selectedCat = selectedCategory.toLowerCase().trim();
+      
+      const matchesCategory = itemCategory === selectedCat || itemBodyPart === selectedCat;
       
       return matchesSearch && matchesCategory;
     });
   };
 
-  const filteredExercises = filterExercises(exercises);
-  const filteredStretches = filterExercises(stretches);
+  const exercises = filterExercises(allExercises);
+  const stretches = filterExercises(allStretches);
+
 
   const renderExerciseCard = (exercise: any) => (
     <Card key={exercise.id} className="hover:shadow-lg transition-shadow">
@@ -165,7 +169,7 @@ const ExerciseCatalog = () => {
               <div>
                 <h1 className="text-2xl font-black">Catálogo de Exercícios</h1>
                 <p className="text-sm text-muted-foreground">
-                  {exercises.length} exercícios • {stretches.length} alongamentos
+                  {allExercises.length} exercícios • {allStretches.length} alongamentos
                 </p>
               </div>
             </div>
@@ -205,18 +209,18 @@ const ExerciseCatalog = () => {
         <Tabs defaultValue="exercises" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="exercises">
-              Exercícios ({filteredExercises.length})
+              Exercícios ({exercises.length})
             </TabsTrigger>
             <TabsTrigger value="stretches">
-              Alongamentos ({filteredStretches.length})
+              Alongamentos ({stretches.length})
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="exercises" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredExercises.map(renderExerciseCard)}
+              {exercises.map(renderExerciseCard)}
             </div>
-            {filteredExercises.length === 0 && (
+            {exercises.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">Nenhum exercício encontrado</p>
               </div>
@@ -225,9 +229,9 @@ const ExerciseCatalog = () => {
 
           <TabsContent value="stretches" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredStretches.map(renderStretchCard)}
+              {stretches.map(renderStretchCard)}
             </div>
-            {filteredStretches.length === 0 && (
+            {stretches.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">Nenhum alongamento encontrado</p>
               </div>
