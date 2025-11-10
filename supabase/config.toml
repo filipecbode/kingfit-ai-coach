@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.generate-stretching]
 verify_jwt = true
+
+[functions.upload-exercise-image]
+verify_jwt = true

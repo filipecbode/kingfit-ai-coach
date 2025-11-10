@@ -58,6 +58,30 @@ export type Database = {
           },
         ]
       }
+      exercise_images: {
+        Row: {
+          created_at: string | null
+          exercise_id: string
+          id: string
+          image_url: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id: string
+          id?: string
+          image_url: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: string
+          id?: string
+          image_url?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       exercise_replacements: {
         Row: {
           completed: boolean | null
