@@ -60,9 +60,32 @@ serve(async (req) => {
     const muscleGroups = workout.title;
     const exercises = workout.exercises;
 
+    // Load stretching catalog
+    const catalogResponse = await fetch("https://raw.githubusercontent.com/yourusername/yourrepo/main/src/data/exercise-catalog.json");
+    let stretchCatalog = null;
+    try {
+      const catalog = await catalogResponse.json();
+      stretchCatalog = catalog.exercises.filter((ex: any) => ex.id.startsWith("st-"));
+    } catch (e) {
+      console.log("Could not load stretch catalog, will use AI's knowledge");
+    }
+
+    const catalogPrompt = stretchCatalog && stretchCatalog.length > 0
+      ? `\n\nCATÁLOGO DE ALONGAMENTOS DISPONÍVEL:
+Você DEVE escolher alongamentos APENAS deste catálogo. Use o campo "name" dos alongamentos.
+${JSON.stringify(stretchCatalog.slice(0, 200), null, 2)}
+
+INSTRUÇÕES PARA USO DO CATÁLOGO:
+- Escolha alongamentos que correspondam aos grupos musculares trabalhados
+- Considere o campo "body_part" para selecionar alongamentos apropriados
+- Use o campo "duration_seconds" como referência para a duração
+- Use o nome exato do alongamento (campo "name") na resposta`
+      : "";
+
     const prompt = `Você é um personal trainer especializado em alongamento. Crie uma sessão de alongamento ESPECÍFICA para quem acabou de treinar ${muscleGroups}.
 
 Baseando-se nos exercícios do treino (${exercises.map((e: any) => e.name).join(', ')}), crie 3-5 alongamentos específicos para esses grupos musculares.
+${catalogPrompt}
 
 REGRAS IMPORTANTES:
 - Cada alongamento deve ter: nome, descrição detalhada de como fazer, duração em segundos (30-60s)

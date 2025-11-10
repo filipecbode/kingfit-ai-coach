@@ -11,6 +11,7 @@ import WorkoutSession from "./pages/WorkoutSession";
 import Evolution from "./pages/Evolution";
 import Stretching from "./pages/Stretching";
 import Profile from "./pages/Profile";
+import ExerciseCatalog from "./pages/ExerciseCatalog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/evolution" element={<Evolution />} />
           <Route path="/stretching" element={<Stretching />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/catalog" element={<ExerciseCatalog />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

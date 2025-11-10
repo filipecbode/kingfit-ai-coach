@@ -43,6 +43,28 @@ serve(async (req) => {
         : `IMPORTANTE: Dar mais ênfase e volume para: ${profile.body_part_preferences.join(", ")}`
       : "";
 
+    // Load exercise catalog
+    const catalogResponse = await fetch("https://raw.githubusercontent.com/yourusername/yourrepo/main/src/data/exercise-catalog.json");
+    let exerciseCatalog = null;
+    try {
+      exerciseCatalog = await catalogResponse.json();
+    } catch (e) {
+      console.log("Could not load exercise catalog, will use AI's knowledge");
+    }
+
+    const catalogPrompt = exerciseCatalog 
+      ? `\n\nCATÁLOGO DE EXERCÍCIOS DISPONÍVEL:
+Você DEVE escolher exercícios APENAS deste catálogo. Use o campo "name" dos exercícios.
+${JSON.stringify(exerciseCatalog.exercises.filter((ex: any) => !ex.id.startsWith("st-")).slice(0, 500), null, 2)}
+
+INSTRUÇÕES PARA USO DO CATÁLOGO:
+- Escolha exercícios que correspondam ao objetivo do usuário (campo "objectives")
+- Considere o nível de dificuldade (campo "difficulty") - iniciante, intermediário ou avançado
+- Priorize exercícios da categoria muscular do dia (campo "category")
+- Respeite as contraindicações se o usuário tiver problemas de saúde
+- Use o nome exato do exercício (campo "name") na resposta`
+      : "";
+
     const prompt = `Você é um personal trainer profissional. Crie um plano de treinos mensal personalizado para:
 
 Nome: ${profile.name}
@@ -56,6 +78,7 @@ Dias por semana: ${profile.days_per_week}
 Horas por dia: ${profile.hours_per_day}h
 ${profile.health_issues ? `Restrições: ${profile.health_issues}` : ""}
 ${bodyPreferencesText ? `Preferências: ${bodyPreferencesText}` : ""}
+${catalogPrompt}
 
 Crie um plano distribuído em ${profile.days_per_week} dias por semana começando pela segunda-feira. Para cada dia, forneça:
 - Título do treino (ex: "Treino de Peito e Tríceps")

@@ -220,6 +220,10 @@ const Dashboard = () => {
             <span className="text-2xl font-black">KINGFIT</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate("/catalog")}>
+              <Dumbbell className="h-4 w-4 mr-2" />
+              FAQ
+            </Button>
             <Button variant="ghost" onClick={() => navigate("/evolution")}>
               <TrendingUp className="h-4 w-4 mr-2" />
               Evolução
