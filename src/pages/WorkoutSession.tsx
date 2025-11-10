@@ -43,6 +43,7 @@ const WorkoutSession = () => {
   const [loading, setLoading] = useState(true);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [exerciseImages, setExerciseImages] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { workoutId } = useParams();
   const { toast } = useToast();
@@ -66,7 +67,22 @@ const WorkoutSession = () => {
 
   useEffect(() => {
     loadWorkout();
+    loadExerciseImages();
   }, [workoutId]);
+
+  const loadExerciseImages = async () => {
+    const { data } = await supabase
+      .from("exercise_images")
+      .select("exercise_id, image_url");
+    
+    if (data) {
+      const imagesMap: Record<string, string> = {};
+      data.forEach(img => {
+        imagesMap[img.exercise_id] = img.image_url;
+      });
+      setExerciseImages(imagesMap);
+    }
+  };
 
   const loadWorkout = async () => {
     try {
@@ -479,11 +495,19 @@ const WorkoutSession = () => {
                 <h2 className="text-3xl font-bold mt-2">{currentExercise.name}</h2>
               </div>
 
-              <div className="aspect-video bg-muted rounded-lg mb-6 flex items-center justify-center">
-                <div className="text-center">
-                  <Dumbbell className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Imagem/vídeo ilustrativo</p>
-                </div>
+              <div className="aspect-video bg-muted rounded-lg mb-6 flex items-center justify-center overflow-hidden">
+                {exerciseImages[currentExercise.name.toLowerCase().replace(/\s+/g, '-')] ? (
+                  <img 
+                    src={exerciseImages[currentExercise.name.toLowerCase().replace(/\s+/g, '-')]} 
+                    alt={currentExercise.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <Dumbbell className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Imagem do exercício</p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4 mb-8">

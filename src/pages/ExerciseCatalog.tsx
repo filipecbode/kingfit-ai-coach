@@ -1,18 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Dumbbell } from "lucide-react";
+import { ArrowLeft, Search, Dumbbell, Upload } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import exerciseCatalog from "@/data/exercise-catalog.json";
 import stretchesCatalog from "@/data/stretches-catalog.json";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const ExerciseCatalog = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todos");
+  const [exerciseImages, setExerciseImages] = useState<Record<string, string>>({});
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+
+  // Carregar imagens dos exercícios
+  useEffect(() => {
+    const loadImages = async () => {
+      const { data } = await supabase
+        .from("exercise_images")
+        .select("exercise_id, image_url");
+      
+      if (data) {
+        const imagesMap: Record<string, string> = {};
+        data.forEach(img => {
+          imagesMap[img.exercise_id] = img.image_url;
+        });
+        setExerciseImages(imagesMap);
+      }
+    };
+    loadImages();
+  }, []);
 
   // Exercícios do catálogo grande (sem alongamentos)
   const allExercises = (exerciseCatalog.exercises || []).filter((ex: any) => {
@@ -51,10 +74,56 @@ const ExerciseCatalog = () => {
   const exercises = filterExercises(allExercises);
   const stretches = filterExercises(allStretches);
 
+  const handleImageUpload = async (exerciseId: string, file: File) => {
+    setUploadingImage(exerciseId);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        
+        const { data, error } = await supabase.functions.invoke('upload-exercise-image', {
+          body: { exerciseId, imageBase64: base64String }
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Imagem adicionada!",
+          description: "A imagem do exercício foi salva com sucesso.",
+        });
+
+        // Atualizar o estado local
+        setExerciseImages(prev => ({
+          ...prev,
+          [exerciseId]: data.imageUrl
+        }));
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Erro ao fazer upload:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível fazer upload da imagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(null);
+    }
+  };
+
 
   const renderExerciseCard = (exercise: any) => (
     <Card key={exercise.id} className="hover:shadow-lg transition-shadow">
       <CardHeader>
+        {exerciseImages[exercise.id] && (
+          <div className="mb-3 rounded-lg overflow-hidden">
+            <img 
+              src={exerciseImages[exercise.id]} 
+              alt={exercise.name}
+              className="w-full h-48 object-cover"
+            />
+          </div>
+        )}
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-lg">{exercise.name}</CardTitle>
@@ -62,6 +131,28 @@ const ExerciseCatalog = () => {
               {exercise.description_short}
             </CardDescription>
           </div>
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(exercise.id, file);
+              }}
+              disabled={uploadingImage === exercise.id}
+            />
+            <Button 
+              size="icon" 
+              variant="outline"
+              disabled={uploadingImage === exercise.id}
+              asChild
+            >
+              <span>
+                <Upload className="h-4 w-4" />
+              </span>
+            </Button>
+          </label>
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
           {exercise.equipment && (
