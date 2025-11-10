@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, TrendingUp, AlertCircle } from "lucide-react";
+import { ArrowLeft, Upload, TrendingUp, AlertCircle, Share2 } from "lucide-react";
+import html2canvas from "html2canvas";
 import { Progress } from "@/components/ui/progress";
 import { AiChat } from "@/components/AiChat";
 import {
@@ -140,6 +141,159 @@ export default function Evolution() {
       .getPublicUrl(fileName);
 
     return publicUrl;
+  };
+
+  const generateStoryImage = async () => {
+    const before = allRecords.find(r => r.id === beforeRecord);
+    const after = allRecords.find(r => r.id === afterRecord);
+    
+    if (!before || !after) {
+      toast({
+        title: "Erro",
+        description: "Selecione os registros antes e depois.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Create canvas for Instagram Story size (1080x1920)
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) return;
+
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
+      gradient.addColorStop(0, '#1a1a1a');
+      gradient.addColorStop(1, '#0a0a0a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 1080, 1920);
+
+      // Title
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 72px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Minha Evolução', 540, 120);
+
+      // Weight difference
+      const weightDiff = after.weight - before.weight;
+      ctx.font = 'bold 96px Arial';
+      ctx.fillStyle = weightDiff < 0 ? '#22c55e' : '#eab308';
+      ctx.fillText(`${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} kg`, 540, 240);
+
+      // Load and draw images
+      const loadImage = (url: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = url;
+        });
+      };
+
+      let yOffset = 320;
+
+      // Draw before photos
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('ANTES', 540, yOffset);
+      
+      ctx.font = '32px Arial';
+      ctx.fillStyle = '#a3a3a3';
+      ctx.fillText(new Date(before.record_date).toLocaleDateString('pt-BR'), 540, yOffset + 45);
+      ctx.fillText(`${before.weight} kg`, 540, yOffset + 85);
+      
+      yOffset += 140;
+
+      // Draw before image (front photo if available)
+      if (before.front_photo_url) {
+        try {
+          const beforeImg = await loadImage(before.front_photo_url);
+          const imgWidth = 480;
+          const imgHeight = 480;
+          const xPos = (1080 - imgWidth) / 2;
+          
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(xPos, yOffset, imgWidth, imgHeight, 20);
+          ctx.clip();
+          ctx.drawImage(beforeImg, xPos, yOffset, imgWidth, imgHeight);
+          ctx.restore();
+        } catch (error) {
+          console.error('Error loading before image:', error);
+        }
+      }
+
+      yOffset += 540;
+
+      // Draw after photos
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('DEPOIS', 540, yOffset);
+      
+      ctx.font = '32px Arial';
+      ctx.fillStyle = '#a3a3a3';
+      ctx.fillText(new Date(after.record_date).toLocaleDateString('pt-BR'), 540, yOffset + 45);
+      ctx.fillText(`${after.weight} kg`, 540, yOffset + 85);
+      
+      yOffset += 140;
+
+      // Draw after image
+      if (after.front_photo_url) {
+        try {
+          const afterImg = await loadImage(after.front_photo_url);
+          const imgWidth = 480;
+          const imgHeight = 480;
+          const xPos = (1080 - imgWidth) / 2;
+          
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(xPos, yOffset, imgWidth, imgHeight, 20);
+          ctx.clip();
+          ctx.drawImage(afterImg, xPos, yOffset, imgWidth, imgHeight);
+          ctx.restore();
+        } catch (error) {
+          console.error('Error loading after image:', error);
+        }
+      }
+
+      // Footer text
+      ctx.fillStyle = '#a3a3a3';
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('💪 Transformação em andamento!', 540, 1840);
+
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `evolucao-${new Date().getTime()}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+          
+          toast({
+            title: "Story gerado! 📸",
+            description: "Imagem salva com sucesso. Compartilhe sua evolução!",
+          });
+        }
+      }, 'image/png');
+
+    } catch (error) {
+      console.error('Error generating story:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar a imagem.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -538,17 +692,26 @@ export default function Evolution() {
                             </div>
                           )}
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                          <Button 
+                            onClick={generateStoryImage}
+                            className="w-full"
+                          >
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Compartilhar Story
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setShowComparison(false)}
+                            className="w-full"
+                          >
+                            Fechar Comparação
+                          </Button>
+                        </div>
                       </div>
                     );
                   })()}
-
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowComparison(false)}
-                    className="w-full"
-                  >
-                    Fechar Comparação
-                  </Button>
                 </div>
             </CardContent>
           </Card>
