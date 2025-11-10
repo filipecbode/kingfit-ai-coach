@@ -180,10 +180,11 @@ const WorkoutSession = () => {
 
       if (error) throw error;
 
+      // Recarregar dados do banco para garantir sincronia
+      await loadWorkout();
+
       // Atualizar estados locais
       if (allExercisesCompleted) {
-        setWorkoutCompleted(true);
-        setCompletedIndices(newCompletedIndices);
         setTransitioning(false);
         
         toast({
@@ -192,9 +193,6 @@ const WorkoutSession = () => {
         });
       } else {
         setTimeout(() => {
-          setCompletedIndices(newCompletedIndices);
-          setExerciseOrder(exerciseOrder.slice(1));
-          
           toast({
             title: "Exercício concluído!",
             description: `Faltam ${exerciseOrder.length - 1} exercícios`,
@@ -420,7 +418,7 @@ const WorkoutSession = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2 mb-6 text-left max-h-[300px] overflow-y-auto">
+                <div className="space-y-2 mb-6 text-left">
                   {workout.exercises.map((exercise, idx) => {
                     const status = getExerciseStatus(idx);
                     const isBlocked = status === 'completed' || status === 'replaced';

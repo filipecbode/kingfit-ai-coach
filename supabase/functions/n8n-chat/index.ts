@@ -23,8 +23,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        action: 'sendMessage',
-        chatId: chatId || 'default',
+        chatId: chatId || 'kingfit-user',
         message: message
       }),
     });
