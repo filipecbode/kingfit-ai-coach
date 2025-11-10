@@ -14,18 +14,33 @@ const ExerciseCatalog = () => {
   const [selectedCategory, setSelectedCategory] = useState("todos");
 
   // Separar exercícios e alongamentos
-  const exercises = exerciseCatalog.exercises.filter((ex: any) => !ex.id.startsWith("st-"));
-  const stretches = exerciseCatalog.exercises.filter((ex: any) => ex.id.startsWith("st-"));
+  const allExercises = exerciseCatalog.exercises || [];
+  const exercises = allExercises.filter((ex: any) => {
+    const id = ex.id || "";
+    return !id.includes("st-");
+  });
+  const stretches = allExercises.filter((ex: any) => {
+    const id = ex.id || "";
+    return id.includes("st-");
+  });
 
   const categories = ["todos", "perna", "costas", "bíceps", "abdômen", "peito", "ombro", "tríceps"];
 
   const filterExercises = (items: any[]) => {
     return items.filter((item: any) => {
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // Busca
+      const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description_short?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === "todos" || 
-        item.category === selectedCategory || 
-        item.body_part === selectedCategory;
+      
+      // Filtro de categoria - normalizar comparações
+      const itemCategory = (item.category || "").toLowerCase();
+      const itemBodyPart = (item.body_part || "").toLowerCase();
+      const selectedCat = selectedCategory.toLowerCase();
+      
+      const matchesCategory = selectedCat === "todos" || 
+        itemCategory === selectedCat || 
+        itemBodyPart === selectedCat;
+      
       return matchesSearch && matchesCategory;
     });
   };
