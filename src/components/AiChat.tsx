@@ -36,16 +36,18 @@ export const AiChat = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('n8n-chat', {
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: { 
-          message: userMessage,
-          chatId: 'kingfit-user'
+          messages: [...messages, { role: 'user', content: userMessage }].map(m => ({
+            role: m.role,
+            content: m.content
+          }))
         }
       });
 
       if (error) throw error;
 
-      const assistantMessage = data.output || data.message || "Desculpe, não consegui processar sua mensagem.";
+      const assistantMessage = data.message || "Desculpe, não consegui processar sua mensagem.";
       
       setMessages(prev => [...prev, { 
         role: 'assistant', 
@@ -55,7 +57,7 @@ export const AiChat = () => {
       console.error('Error sending message:', error);
       toast({
         title: "Erro ao enviar mensagem",
-        description: error.message,
+        description: error.message || "Tente novamente em alguns instantes",
         variant: "destructive",
       });
     } finally {
