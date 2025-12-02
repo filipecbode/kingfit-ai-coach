@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Dumbbell, Upload } from "lucide-react";
+import { ArrowLeft, Search, Dumbbell, Upload, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,8 @@ const ExerciseCatalog = () => {
   const [selectedCategory, setSelectedCategory] = useState("todos");
   const [exerciseImages, setExerciseImages] = useState<Record<string, string>>({});
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
 
   // Carregar imagens dos exercícios
   useEffect(() => {
@@ -109,6 +111,65 @@ const ExerciseCatalog = () => {
     } finally {
       setUploadingImage(null);
     }
+  };
+
+  const generateAllImages = async () => {
+    // Pegar apenas exercícios que não têm imagem
+    const exercisesWithoutImages = allExercises.filter((ex: any) => !exerciseImages[ex.id]);
+    
+    if (exercisesWithoutImages.length === 0) {
+      toast({
+        title: "Tudo pronto!",
+        description: "Todos os exercícios já têm imagens.",
+      });
+      return;
+    }
+
+    setGeneratingImages(true);
+    setGenerationProgress({ current: 0, total: exercisesWithoutImages.length });
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Gerar imagens de forma sequencial para não sobrecarregar
+    for (let i = 0; i < exercisesWithoutImages.length; i++) {
+      const exercise = exercisesWithoutImages[i];
+      setGenerationProgress({ current: i + 1, total: exercisesWithoutImages.length });
+
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-exercise-images', {
+          body: { 
+            exerciseId: exercise.id,
+            exerciseName: exercise.name,
+            equipment: exercise.equipment
+          }
+        });
+
+        if (error) throw error;
+
+        if (data?.success && data?.imageUrl) {
+          setExerciseImages(prev => ({
+            ...prev,
+            [exercise.id]: data.imageUrl
+          }));
+          successCount++;
+        }
+
+        // Pequena pausa entre requisições
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`Erro ao gerar imagem para ${exercise.name}:`, error);
+        errorCount++;
+      }
+    }
+
+    setGeneratingImages(false);
+    setGenerationProgress({ current: 0, total: 0 });
+
+    toast({
+      title: "Geração concluída!",
+      description: `${successCount} imagens geradas com sucesso. ${errorCount > 0 ? `${errorCount} erros.` : ''}`,
+    });
   };
 
 
@@ -293,6 +354,38 @@ const ExerciseCatalog = () => {
                 {cat.charAt(0).toUpperCase() + cat.slice(1)}
               </Button>
             ))}
+          </div>
+        </div>
+
+        {/* Botão de Geração Automática de Imagens */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">Gerar Imagens com IA</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Gera automaticamente imagens otimizadas e leves de aparelhos para todos os exercícios
+              </p>
+              {!generatingImages && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {allExercises.filter((ex: any) => !exerciseImages[ex.id]).length} exercícios sem imagem
+                </p>
+              )}
+            </div>
+            <Button 
+              onClick={generateAllImages}
+              disabled={generatingImages || allExercises.filter((ex: any) => !exerciseImages[ex.id]).length === 0}
+              className="gap-2 whitespace-nowrap"
+              size="lg"
+            >
+              <Sparkles className="h-4 w-4" />
+              {generatingImages 
+                ? `${generationProgress.current}/${generationProgress.total}` 
+                : 'Gerar Imagens'
+              }
+            </Button>
           </div>
         </div>
 
